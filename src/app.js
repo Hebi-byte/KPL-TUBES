@@ -1,21 +1,46 @@
 const express = require("express");
-const cors = require("cors");
+const db = require("./config/database");
 require("dotenv").config();
 
 const app = express();
 
-app.use(cors());
 app.use(express.json());
-app.use(express.static("public"));
 
 app.get("/", (req, res) => {
+  res.send("API KPL Tubes berjalan");
+});
+
+app.get("/test-db", async (req, res) => {
+  try {
+    const [rows] = await db.query("SELECT 1 + 1 AS hasil");
+
+    res.json({
+      message: "Database berhasil terkoneksi",
+      hasil: rows[0].hasil
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Database gagal terkoneksi",
+      error: error.message
+    });
+  }
+});
+
+
+app.get("/test-env", (req, res) => {
   res.json({
-    message: "Version Control Project API"
+    PORT: process.env.PORT,
+    DB_HOST: process.env.DB_HOST,
+    DB_USER: process.env.DB_USER,
+    DB_PASSWORD: process.env.DB_PASSWORD === "" ? "kosong" : "ada isi",
+    DB_NAME: process.env.DB_NAME,
+    JWT_SECRET: process.env.JWT_SECRET ? "terbaca" : "tidak terbaca"
   });
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT;
 
 app.listen(PORT, () => {
-  console.log(`Server berjalan di port ${PORT}`);
+  console.log(`Server berjalan di http://localhost:${PORT}`);
 });
+
