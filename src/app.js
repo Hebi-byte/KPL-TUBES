@@ -53,3 +53,8 @@ const PORT = process.env.PORT;
 app.listen(PORT, () => {
   console.log(`Server berjalan di http://localhost:${PORT}`);
 });
+
+app.get("/test", (req, res) => {
+  const { sendSuccess, sendError } = require("./utils/response");
+  sendSuccess(res, { nama: "Budi", umur: 20 }, "Ini dari response.js milikku");
+});
