@@ -61,3 +61,51 @@ taskRows.forEach((row) => {
     row.style.transform = "translateY(0)";
   });
 });
+
+// =========================
+// STATUS BADGE SWITCHER
+// =========================
+
+const statusBadges =
+  document.querySelectorAll('.status-badge');
+
+statusBadges.forEach(badge => {
+
+  badge.addEventListener('click', () => {
+
+    // Completed → Pending
+    if (badge.classList.contains('completed')) {
+
+      badge.classList.remove('completed');
+
+      badge.classList.add('pending');
+
+      badge.textContent = 'Pending';
+
+    }
+
+    // Pending → In Progress
+    else if (badge.classList.contains('pending')) {
+
+      badge.classList.remove('pending');
+
+      badge.classList.add('in-progress');
+
+      badge.textContent = 'In Progress';
+
+    }
+
+    // In Progress → Completed
+    else if (badge.classList.contains('in-progress')) {
+
+      badge.classList.remove('in-progress');
+
+      badge.classList.add('completed');
+
+      badge.textContent = 'Completed';
+
+    }
+
+  });
+
+});
