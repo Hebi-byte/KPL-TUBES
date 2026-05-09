@@ -267,19 +267,12 @@ body {
 
 .status-column {
   display: flex;
-  justify-content: space-between;
+  align-items: center;
+  gap: 10px
 }
 
 .task-content {
   padding: 24px;
-}
-
-.section-title {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--primary);
-  margin-bottom: 20px;
 }
 
 .task-row {
@@ -323,8 +316,9 @@ body {
 }
 
 .task-status {
-  display: flex;
-  justify-content: flex-end;
+   display: flex;
+  justify-content: flex-start;
+  padding-left: 18px;
 }
 
 .completed,
@@ -389,8 +383,9 @@ body {
 
   .assignee-column,
   .status-column {
-    border-left: none;
-    padding-left: 0;
+     display: flex;
+     align-items: center;
+     padding-left: 18px;
   }
 
   .task-status {
