@@ -1,16 +1,24 @@
 const express = require("express");
-const db = require("./config/database");
 const path = require("path");
-require("dotenv").config();
+const db = require("./config/database");
 
+require("dotenv").config();
 
 const app = express();
 
 app.use(express.json());
+
+// tarik file frontend dari folder public
 app.use(express.static(path.join(__dirname, "../public")));
 
+// route utama selalu buka index.html
 app.get("/", (req, res) => {
-  res.send("API KPL Tubes berjalan");
+  res.sendFile(path.join(__dirname, "../public/index.html"));
+});
+
+// supaya refresh di /dashboard, /projects, dll tetap balik ke index.html
+app.get(/^\/(?!api|test-db|test-env).*/, (req, res) => {
+  res.sendFile(path.join(__dirname, "../public/index.html"));
 });
 
 app.get("/test-db", async (req, res) => {
@@ -29,7 +37,6 @@ app.get("/test-db", async (req, res) => {
   }
 });
 
-
 app.get("/test-env", (req, res) => {
   res.json({
     PORT: process.env.PORT,
@@ -46,4 +53,3 @@ const PORT = process.env.PORT;
 app.listen(PORT, () => {
   console.log(`Server berjalan di http://localhost:${PORT}`);
 });
-
