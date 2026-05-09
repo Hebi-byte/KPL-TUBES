@@ -1,10 +1,13 @@
 const express = require("express");
 const db = require("./config/database");
+const path = require("path");
 require("dotenv").config();
+
 
 const app = express();
 
 app.use(express.json());
+app.use(express.static(path.join(__dirname, "../public")));
 
 app.get("/", (req, res) => {
   res.send("API KPL Tubes berjalan");
