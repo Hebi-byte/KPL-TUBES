@@ -4,24 +4,17 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>KPL Tubes</title>
-  <link rel="stylesheet" href="/style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Mulish:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <link rel="stylesheet" href="/CSS/style.css" />
 </head>
-
 <body>
-  <header class="navbar">
-    <nav>
-      <a href="/" data-page="home"></a>
-      <a href="/login" data-page="login"></a>
-      <a href="/register" data-page="register"></a>
-      <a href="/dashboard" data-page="dashboard"></a>
-      <a href="/projects" data-page="projects"></a>
-    </nav>
-  </header>
+  <div id="app">
+    <p class="loading-text">Loading...</p>
+  </div>
 
-  <main id="content">
-    <p>Loading...</p>
-  </main>
-
-  <script src="/app.js"></script>
+  <script type="module" src="/app.js"></script>
 </body>
 </html>

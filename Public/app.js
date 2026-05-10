@@ -1,73 +1,110 @@
-const contentEl = document.getElementById("content");
+// Import modules from Content folder
+import { renderSidebar, renderEmptyProject } from './Content/sidebar.js';
+import { renderMain } from './Content/main.js';
+import { renderTasks } from './Content/task.js';
+import { state, appEl } from './Content/shared.js';
+import { escapeHtml } from './Content/utils.js';
 
-const pageMap = {
-  "/": "home",
-  "/login": "login",
-  "/register": "register",
-  "/dashboard": "dashboard",
-  "/projects": "projects"
-};
+async function fetchJson(url) {
+  const response = await fetch(url);
+  const result = await response.json();
 
-// cache supaya halaman yang sudah pernah dibuka tidak fetch ulang
-const pageCache = new Map();
+  if (!response.ok || !result.success) {
+    throw new Error(result.message || `Gagal mengambil data dari ${url}`);
+  }
 
-async function loadPage(pathname, pushState = true) {
-  const page = pageMap[pathname] || "home";
-  const url = `/content/${page}.html`;
+  return result.data;
+}
+
+function getProjectIdFromPath() {
+  const match = location.pathname.match(/^\/projects\/(\d+)/);
+  return match ? Number(match[1]) : null;
+}
+
+async function loadProjects() {
+  state.projects = await fetchJson("/api/projects");
+
+  if (state.projects.length === 0) {
+    state.activeProjectId = null;
+    return;
+  }
+
+  const projectIdFromPath = getProjectIdFromPath();
+  const projectExists = state.projects.some((project) => project.id_project === projectIdFromPath);
+
+  state.activeProjectId = projectExists ? projectIdFromPath : state.projects[0].id_project;
+
+  if (!projectExists && location.pathname.startsWith("/projects")) {
+    history.replaceState({}, "", `/projects/${state.activeProjectId}`);
+  }
+}
+
+async function loadDashboard() {
+  appEl.innerHTML = `<p class="loading-text">Loading project...</p>`;
 
   try {
-    contentEl.innerHTML = "<p>Loading...</p>";
+    await loadProjects();
 
-    let html;
-
-    if (pageCache.has(page)) {
-      html = pageCache.get(page);
-    } else {
-      const response = await fetch(url);
-
-      if (!response.ok) {
-        throw new Error(`Gagal load ${url}`);
-      }
-
-      html = await response.text();
-      pageCache.set(page, html);
+    if (!state.activeProjectId) {
+      renderEmptyProject();
+      return;
     }
 
-    contentEl.innerHTML = html;
+    const [activeProject, tasks] = await Promise.all([
+      fetchJson(`/api/projects/${state.activeProjectId}`),
+      fetchJson(`/api/projects/${state.activeProjectId}/tasks`),
+    ]);
 
-    if (pushState) {
-      history.pushState({ page }, "", pathname);
-    }
-
-    setActiveNav(pathname);
+    renderDashboard(activeProject, tasks);
   } catch (error) {
-    contentEl.innerHTML = `
-      <section class="card">
-        <h2>Halaman gagal dimuat</h2>
-        <p>${error.message}</p>
+    appEl.innerHTML = `
+      <section class="error-card">
+        <h2>Data gagal dimuat</h2>
+        <p>${escapeHtml(error.message)}</p>
       </section>
     `;
   }
 }
 
-function setActiveNav(pathname) {
-  document.querySelectorAll("nav a").forEach((link) => {
-    link.classList.toggle("active", link.getAttribute("href") === pathname);
+function renderDashboard(activeProject, tasks) {
+  appEl.innerHTML = `
+    ${renderSidebar()}
+    ${renderMain(activeProject, tasks)}
+  `;
+
+  bindProjectLinks();
+  bindSearch(tasks);
+}
+
+function bindProjectLinks() {
+  document.querySelectorAll(".project-link").forEach((link) => {
+    link.addEventListener("click", (event) => {
+      event.preventDefault();
+      state.activeProjectId = Number(link.dataset.projectId);
+      history.pushState({}, "", `/projects/${state.activeProjectId}`);
+      loadDashboard();
+    });
   });
 }
 
-document.querySelectorAll("nav a").forEach((link) => {
-  link.addEventListener("click", (event) => {
-    event.preventDefault();
+function bindSearch(allTasks) {
+  const input = document.getElementById("taskSearch");
+  const taskContent = document.getElementById("taskContent");
 
-    const pathname = link.getAttribute("href");
-    loadPage(pathname);
+  if (!input || !taskContent) return;
+
+  input.addEventListener("input", () => {
+    const keyword = input.value.toLowerCase();
+    const filteredTasks = allTasks.filter((task) => {
+      return [task.judul_task, task.deskripsi_task, task.assignee, task.nama_status]
+        .filter(Boolean)
+        .some((value) => value.toLowerCase().includes(keyword));
+    });
+
+    taskContent.innerHTML = renderTasks(filteredTasks);
   });
-});
+}
 
-window.addEventListener("popstate", () => {
-  loadPage(location.pathname, false);
-});
+window.addEventListener("popstate", loadDashboard);
 
-// load awal
-loadPage(location.pathname, false);
+loadDashboard();
