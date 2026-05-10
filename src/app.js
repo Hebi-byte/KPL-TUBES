@@ -21,32 +21,6 @@ app.get(/^\/(?!api|test-db|test-env).*/, (req, res) => {
   res.sendFile(path.join(__dirname, "../public/index.html"));
 });
 
-app.get("/test-db", async (req, res) => {
-  try {
-    const [rows] = await db.query("SELECT 1 + 1 AS hasil");
-
-    res.json({
-      message: "Database berhasil terkoneksi",
-      hasil: rows[0].hasil
-    });
-  } catch (error) {
-    res.status(500).json({
-      message: "Database gagal terkoneksi",
-      error: error.message
-    });
-  }
-});
-
-app.get("/test-env", (req, res) => {
-  res.json({
-    PORT: process.env.PORT,
-    DB_HOST: process.env.DB_HOST,
-    DB_USER: process.env.DB_USER,
-    DB_PASSWORD: process.env.DB_PASSWORD === "" ? "kosong" : "ada isi",
-    DB_NAME: process.env.DB_NAME,
-    JWT_SECRET: process.env.JWT_SECRET ? "terbaca" : "tidak terbaca"
-  });
-});
 
 const PORT = process.env.PORT;
 
