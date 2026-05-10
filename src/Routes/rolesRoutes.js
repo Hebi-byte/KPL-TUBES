@@ -4,7 +4,10 @@ const router = express.Router();
 const {
   getAllRoles,
   getRoleById,
-} = require("../controllers/roleController");
+  createRole,
+  updateRole,
+  deleteRole,
+} = require("../controllers/rolesController");
 
 router.get("/", getAllRoles);
 router.get("/:id", getRoleById);
