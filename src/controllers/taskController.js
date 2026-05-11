@@ -108,6 +108,49 @@ const createTask = async (req, res) => {
         message: "id_project, judul_task, id_status, dan created_by wajib diisi",
       });
     }
+    
+  // CEK STATUS TASK SAAT INI
+  const [currentTask] = await db.query(
+    `
+    SELECT id_status
+    FROM tasks
+    WHERE id_task = ?
+    `,
+    [id]
+  );
+
+  if (currentTask.length === 0) {
+    return res.status(404).json({
+      message: "Task tidak ditemukan",
+    });
+  }
+
+  const currentStatus = currentTask[0].id_status;
+
+  // VALIDASI WORKFLOW
+  const [workflow] = await db.query(
+    `
+    SELECT *
+    FROM workflow
+    WHERE route_name = ?
+    AND status_asal = ?
+    AND status_tujuan = ?
+    AND id_role = ?
+    AND is_active = 1
+    `,
+    [
+      "task.update",
+      currentStatus,
+      id_status,
+      id_role,
+    ]
+  );
+
+if (workflow.length === 0) {
+  return res.status(403).json({
+    message: "Perpindahan status tidak diizinkan",
+  });
+}
 
     const [result] = await db.query(
       `
@@ -159,6 +202,7 @@ const updateTask = async (req, res) => {
       id_status,
       assigned_to,
       due_date,
+      id_role,
     } = req.body;
 
     if (!id_project || !judul_task || !id_status) {
