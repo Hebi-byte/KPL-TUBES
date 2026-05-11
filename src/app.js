@@ -10,7 +10,7 @@ const rolesRoutes = require("./Routes/rolesRoutes");
 const workflowRoutes = require("./Routes/workflowRoutes");
 const historyRoutes = require("./Routes/historyRoutes");
 const authRoutes = require("./Routes/authRoutes");
-const commitRoutes = require("./Routes/commitRoutes");
+
 
 
 require("dotenv").config();
@@ -27,7 +27,7 @@ app.use("/api/roles", rolesRoutes);
 app.use("/api/workflows", workflowRoutes);
 app.use("/api/history", historyRoutes);
 app.use("/api/auth", authRoutes);
-app.use("/api/commits", commitRoutes);
+
 
 app.use(express.static(path.join(__dirname, "../public")));
 
