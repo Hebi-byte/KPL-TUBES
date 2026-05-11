@@ -39,5 +39,10 @@ function bindSearch(allTasks) {
   });
 }
 
-window.addEventListener("popstate");
-
+// window.addEventListener("popstate");
+appEl.innerHTML = `
+  ${renderSidebar()}
+  <main class="main-content">
+    <h1>Dashboard berhasil tampil</h1>
+  </main>
+`;
