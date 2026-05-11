@@ -29,22 +29,23 @@ app.use("/api/history", historyRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/commits", commitRoutes);
 
-// tarik file frontend dari folder public
 app.use(express.static(path.join(__dirname, "../public")));
 
-
-
-// route utama selalu buka index.html
 app.get("/", (req, res) => {
+  res.redirect("/login");
+});
+
+app.get("/login", (req, res) => {
+  res.sendFile(path.join(__dirname, "../public/login.html"));
+});
+
+app.get("/dashboard", (req, res) => {
   res.sendFile(path.join(__dirname, "../public/index.html"));
 });
 
-
-// supaya refresh di /dashboard, /projects, dll tetap balik ke index.html
-app.get(/^\/(?!api|test-db|test-env).*/, (req, res) => {
-  res.sendFile(path.join(__dirname, "../public/index.html"));
+app.get(/^\/(?!api|test-db|test-env|login|dashboard).*/, (req, res) => {
+  res.redirect("/login");
 });
-
 
 const PORT = process.env.PORT;
 

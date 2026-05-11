@@ -4,11 +4,11 @@ const jwt = require("jsonwebtoken");
 
 const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { username, password } = req.body;
 
-    if (!email || !password) {
+    if (!username || !password) {
       return res.status(400).json({
-        message: "email dan password wajib diisi",
+        message: "username dan password wajib diisi",
       });
     }
 
@@ -23,23 +23,32 @@ const login = async (req, res) => {
         r.nama_role
       FROM users u
       LEFT JOIN roles r ON u.id_role = r.id_role
-      WHERE u.email = ?
+      WHERE LOWER(TRIM(u.nama_user)) = LOWER(TRIM(?))
       `,
-      [email]
+      [username]
     );
 
     if (rows.length === 0) {
       return res.status(401).json({
-        message: "Email atau password salah",
+        message: "Username atau password salah",
       });
     }
 
     const user = rows[0];
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+
+    let isPasswordValid = false;
+
+    // Kalau password di database sudah bcrypt hash, pakai bcrypt.compare.
+    // Kalau data lama masih plaintext, bandingkan langsung supaya tetap bisa login.
+    if (user.password && user.password.startsWith("$2")) {
+      isPasswordValid = await bcrypt.compare(password, user.password);
+    } else {
+      isPasswordValid = password === user.password;
+    }
 
     if (!isPasswordValid) {
       return res.status(401).json({
-        message: "Email atau password salah",
+        message: "Username atau password salah",
       });
     }
 

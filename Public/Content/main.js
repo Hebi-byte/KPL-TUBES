@@ -11,7 +11,7 @@ function renderMain(project, tasks) {
             <div class="project-icon">
               <i class="fa-solid fa-diagram-project"></i>
             </div>
-            <div>
+            <div >
               <h2>${escapeHtml(project.nama_project)}</h2>
               <p class="project-description">${escapeHtml(project.deskripsi || "Tidak ada deskripsi project.")}</p>
               <div class="badge">
