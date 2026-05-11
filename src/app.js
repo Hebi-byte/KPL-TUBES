@@ -11,7 +11,7 @@ const workflowRoutes = require("./Routes/workflowRoutes");
 const historyRoutes = require("./Routes/historyRoutes");
 const authRoutes = require("./Routes/authRoutes");
 const commitRoutes = require("./Routes/commitRoutes");
-const { get } = require("http");
+
 
 require("dotenv").config();
 
@@ -32,9 +32,6 @@ app.use("/api/commits", commitRoutes);
 // tarik file frontend dari folder public
 app.use(express.static(path.join(__dirname, "../public")));
 
-app.get("/api/projects", async (req, res) => {
-  await getAllProjects(req, res);
-});
 
 
 // route utama selalu buka index.html
