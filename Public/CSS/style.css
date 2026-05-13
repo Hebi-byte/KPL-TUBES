@@ -70,6 +70,9 @@ body {
 
 .sidebar-bottom {
   margin-top: auto;
+  gap: 12px;
+  display: flex;
+  flex-direction: column;
 }
 
 .add-project-btn {
@@ -93,6 +96,7 @@ body {
   align-items: center;
   gap: 12px;
   margin-top: 24px;
+  margin-bottom: 22px;
   color: var(--text-light);
   text-decoration: none;
 }

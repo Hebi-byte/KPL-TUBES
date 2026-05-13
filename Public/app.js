@@ -86,10 +86,7 @@ async function renderDashboard() {
     const sidebarBottom = document.querySelector(".sidebar-bottom");
     if (sidebarBottom && !document.getElementById("logoutBtn")) {
       sidebarBottom.insertAdjacentHTML("beforeend", `
-        <button id="logoutBtn" class="add-project-btn" type="button">
-          <i class="fa-solid fa-right-from-bracket"></i>
-          Logout
-        </button>
+        
       `);
     }
 

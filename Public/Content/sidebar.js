@@ -31,6 +31,10 @@ function renderSidebar() {
           <i class="fa-solid fa-plus"></i>
           Add Project
         </button>
+        <button id="logoutBtn" class="add-project-btn" type="button">
+          <i class="fa-solid fa-right-from-bracket"></i>
+          Logout
+        </button>
         <a href="#" class="settings-link">
           <i class="fa-solid fa-gear"></i>
           <span>Setting</span>
