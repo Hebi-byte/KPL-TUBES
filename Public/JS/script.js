@@ -109,3 +109,37 @@ statusBadges.forEach(badge => {
   });
 
 });
+
+// =========================
+// TASK MODAL
+// =========================
+
+function openModal() {
+
+  const modal =
+    document.getElementById("task-modal");
+
+  if (modal) {
+
+    modal.classList.remove("hidden");
+
+    document.body.style.overflow = "hidden";
+
+  }
+
+}
+
+function closeModal() {
+
+  const modal =
+    document.getElementById("task-modal");
+
+  if (modal) {
+
+    modal.classList.add("hidden");
+
+    document.body.style.overflow = "auto";
+
+  }
+
+}
