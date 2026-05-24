@@ -667,22 +667,30 @@ button {
   color: var(--orange-text);
 }
 
-.status-badge.in-progress {
+.status-badge.in-progress  {
+  background: var(--yellow-bg);
+  color: var(--yellow-text);
+}
+
+.status-badge.review {
   background: var(--blue-bg);
   color: var(--blue-text);
 }
 
-.task-more {
+.task-edit {
   justify-content: center;
   border: 0;
   border-left: 1px solid var(--line);
-  color: #a19aaa;
-  font-size: 1.2rem;
+  color: var(--primary);
+  font-size: 0.86rem;
+  font-weight: 800;
   background: transparent;
+  cursor: pointer;
 }
 
-.task-more:hover {
-  color: var(--orange-text);
+.task-edit:hover {
+  color: var(--primary-dark);
+  background: #f7f3ff;
 }
 
 .empty-state,

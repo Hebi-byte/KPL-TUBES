@@ -34,7 +34,7 @@ function renderTasks(tasks) {
           <button class="status-badge ${statusClass}" type="button">${escapeHtml(statusText)}</button>
         </div>
 
-        <button class="task-cell task-more" data-delete-task="${task.id_task}" title="Delete task">×</button>
+        <button class="task-cell task-edit" data-edit-task="${task.id_task}" title="Edit task">Edit</button>
       </article>
     `;
   }).join('');

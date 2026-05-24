@@ -14,6 +14,10 @@ function normalizeStatus(status = '') {
     return 'completed';
   }
 
+  if (text.includes('review')) {
+    return 'review';
+  }
+
   if (text.includes('progress') || text.includes('proses') || text.includes('ongoing') || text.includes('on going')) {
     return 'in-progress';
   }

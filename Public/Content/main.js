@@ -66,10 +66,6 @@ function renderMain(project, tasks, totalTaskCount = 0) {
         </div>
 
         <div class="task-content" id="taskContent">
-          <div class="section-title">
-            <span class="chevron-down" aria-hidden="true"></span>
-            <span>Section 1</span>
-          </div>
           <div class="task-list">
             ${renderTasks(tasks)}
           </div>
