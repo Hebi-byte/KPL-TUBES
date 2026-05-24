@@ -4,7 +4,7 @@ import { renderTasks } from './task.js';
 function renderMain(project, tasks, totalTaskCount = 0) {
   const title = escapeHtml(project?.nama_project || 'Project');
   const description = escapeHtml(
-    project?.deskripsi
+    project?.deskripsi_project
     || project?.description
     || 'Belum ada deskripsi project.'
   );
@@ -66,6 +66,10 @@ function renderMain(project, tasks, totalTaskCount = 0) {
         </div>
 
         <div class="task-content" id="taskContent">
+          <div class="section-title">
+            <span class="chevron-down" aria-hidden="true"></span>
+            <span>Section 1</span>
+          </div>
           <div class="task-list">
             ${renderTasks(tasks)}
           </div>

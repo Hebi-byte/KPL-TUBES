@@ -311,7 +311,15 @@ button {
   font-size: 1.55rem;
   line-height: 1.1;
   letter-spacing: -0.03em;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
+}
+
+.project-description {
+  max-width: 620px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.35;
+  margin-bottom: 9px;
 }
 
 .badge {
@@ -324,6 +332,16 @@ button {
   padding: 5px 11px;
   font-size: 0.83rem;
   font-weight: 800;
+}
+
+.task-count-badge {
+  color: #5b48c9;
+  background: #eee9ff;
+}
+
+.icon-task-count::before {
+  content: "☑";
+  font-size: 0.82rem;
 }
 
 .header-actions {
