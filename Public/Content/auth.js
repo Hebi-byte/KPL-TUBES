@@ -1,80 +1,65 @@
-function redirectIfAlreadyLogin() {
-  if (localStorage.getItem("token")) {
-    window.location.replace("/dashboard");
-  }
+function isLoggedIn() {
+  return Boolean(localStorage.getItem('token'));
 }
 
 function requireLogin() {
-  if (!localStorage.getItem("token")) {
-    window.location.replace("/login");
+  if (!isLoggedIn()) {
+    window.location.href = '/login';
   }
 }
 
-function setupLoginHandler() {
-  const form = document.getElementById("loginForm");
-  const message = document.getElementById("message");
-
-  if (!form) return;
-
-  const togglePassword = document.getElementById("togglePassword");
-  const passwordInput = document.getElementById("password");
-
-  if (togglePassword && passwordInput) {
-    togglePassword.addEventListener("click", () => {
-      const isPassword = passwordInput.type === "password";
-      passwordInput.type = isPassword ? "text" : "password";
-      togglePassword.innerHTML = isPassword
-        ? '<i class="fa-solid fa-eye"></i>'
-        : '<i class="fa-solid fa-eye-slash"></i>';
-    });
+function redirectIfAlreadyLogin() {
+  if (isLoggedIn()) {
+    window.location.href = '/dashboard';
   }
+}
 
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
+function logout() {
+  localStorage.removeItem('token');
+  localStorage.removeItem('taskflow_user');
+  window.location.href = '/login';
+}
 
-    const username = document.getElementById("username")?.value.trim();
-    const password = document.getElementById("password")?.value;
+async function setupLoginHandler() {
+  const form = document.getElementById('loginForm');
+  const togglePassword = document.getElementById('togglePassword');
+  const passwordInput = document.getElementById('password');
+  const message = document.getElementById('message');
+
+  togglePassword?.addEventListener('click', () => {
+    passwordInput.type = passwordInput.type === 'password' ? 'text' : 'password';
+  });
+
+  form?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    message.textContent = '';
+
+    const formData = new FormData(form);
+    const username = formData.get('username')?.trim();
+    const password = formData.get('password')?.trim();
 
     if (!username || !password) {
-      if (message) message.textContent = "Username dan password wajib diisi";
+      message.textContent = 'Username dan password wajib diisi.';
       return;
     }
 
     try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ username, password })
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
       });
 
       const result = await response.json();
+      if (!response.ok) throw new Error(result.message || 'Login gagal');
 
-      if (!response.ok) {
-        if (message) message.textContent = result.message || "Login gagal";
-        return;
-      }
-
-      localStorage.setItem("token", result.data.token);
-      localStorage.setItem("user", JSON.stringify(result.data.user));
-
-      window.location.replace("/dashboard");
+      localStorage.setItem('token', result.data.token);
+      localStorage.setItem('taskflow_user', JSON.stringify(result.data.user));
+      window.location.href = '/dashboard';
     } catch (error) {
-      if (message) message.textContent = "Terjadi kesalahan saat login";
+      message.textContent = error.message;
     }
   });
 }
 
-function logout() {
-  localStorage.removeItem("token");
-  localStorage.removeItem("user");
-  window.location.replace("/login");
-}
-
-export {
-  redirectIfAlreadyLogin,
-  requireLogin,
-  setupLoginHandler,
-  logout
-};
+export { isLoggedIn, requireLogin, redirectIfAlreadyLogin, logout, setupLoginHandler };

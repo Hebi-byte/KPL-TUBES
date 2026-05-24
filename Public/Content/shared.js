@@ -1,7 +1,12 @@
-// Shared application state
-export const state = {
+const appEl = document.getElementById('app');
+
+const state = {
   projects: [],
+  tasks: [],
+  users: [],
+  statuses: [],
   activeProjectId: null,
+  showCompleted: true,
 };
 
-export const appEl = document.getElementById("app");
+export { appEl, state };

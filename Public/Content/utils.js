@@ -1,25 +1,28 @@
-function escapeHtml(value = "") {
+function escapeHtml(value = '') {
   return String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
 }
 
-function normalizeStatus(status = "") {
-  const text = status.toLowerCase();
+function normalizeStatus(status = '') {
+  const text = String(status).toLowerCase();
 
-  if (text.includes("complete") || text.includes("done") || text.includes("selesai")) {
-    return "completed";
+  if (text.includes('complete') || text.includes('done') || text.includes('selesai')) {
+    return 'completed';
   }
 
-  if (text.includes("progress") || text.includes("proses")) {
-    return "in-progress";
+  if (text.includes('progress') || text.includes('proses') || text.includes('ongoing') || text.includes('on going')) {
+    return 'in-progress';
   }
 
-  return "pending";
+  return 'pending';
 }
 
-// Export functions
-export { escapeHtml, normalizeStatus };
+function getInitial(name = '?') {
+  return String(name || '?').trim().charAt(0).toUpperCase() || '?';
+}
+
+export { escapeHtml, normalizeStatus, getInitial };

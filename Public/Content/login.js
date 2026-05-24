@@ -1,76 +1,41 @@
 function renderLogin() {
   return `
+    <section class="login-container">
+      <div class="login-card">
+        <header class="login-header">
+          <div class="login-mark">TF</div>
+          <h1>TaskFlow</h1>
+          <h2>Login</h2>
+          <p>Manage your task with us!</p>
+        </header>
 
-  <main class="login-container">
+        <form class="login-form" id="loginForm">
+          <div class="input-group">
+            <label for="username">Username</label>
+            <input id="username" name="username" type="text" placeholder="admin" autocomplete="username" />
+          </div>
 
-    <div class="login-card">
+          <div class="input-group">
+            <label for="password">Password</label>
+            <div class="password-wrapper">
+              <input id="password" name="password" type="password" placeholder="admin" autocomplete="current-password" />
+              <button id="togglePassword" type="button" aria-label="Tampilkan password">👁</button>
+            </div>
+          </div>
 
-      <!-- Logo -->
-      <div class="login-header">
-        <h1>TaskFlow</h1>
-        <h2>Login</h2>
-        <p>Manage Your Task With Us!</p>
+          <div class="form-options">
+            <label class="remember-box">
+              <input type="checkbox" checked />
+              <span>Remember me</span>
+            </label>
+            <a href="#">Forgot password?</a>
+          </div>
+
+          <p class="login-message" id="message"></p>
+          <button class="login-btn" type="submit">Log In</button>
+        </form>
       </div>
-
-      <!-- Form -->
-      <form id="loginForm">
-
-        <!-- Username -->
-        <div class="input-group">
-          <label>Username</label>
-
-          <input
-            type="text"
-            id="username"
-            placeholder="Masukkan Username Anda"
-          >
-        </div>
-
-        <!-- Password -->
-        <div class="input-group">
-
-          <label>Password</label>
-
-          <div class="password-wrapper">
-
-            <input
-              type="password"
-              id="password"
-              placeholder="Masukkan Password Anda"
-            >
-
-            <button type="button" id="togglePassword">
-              <i class="fa-solid fa-eye-slash"></i>
-            </button>
-
-          </div>
-
-        </div>
-
-        <!-- Remember -->
-        <div class="form-options">
-
-          <div class="remember-box">
-            <input type="checkbox" id="remember">
-            <label for="remember">Remember me</label>
-          </div>
-
-          <a href="#">Forgot password?</a>
-
-        </div>
-
-        <!-- Login Button -->
-        <button type="submit" class="login-btn">
-          Log In
-        </button>
-
-      </form>
-
-      <p id="message" class="login-message"></p>
-
-    </div>
-
-  </main>
+    </section>
   `;
 }
 
