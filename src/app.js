@@ -1,6 +1,6 @@
 const express = require("express");
 const path = require("path");
-const db = require("./config/database");
+require("dotenv").config();
 
 const userRoutes = require("./Routes/userRoutes");
 const projectRoutes = require("./Routes/projectRoutes");
@@ -11,13 +11,11 @@ const workflowRoutes = require("./Routes/workflowRoutes");
 const historyRoutes = require("./Routes/historyRoutes");
 const authRoutes = require("./Routes/authRoutes");
 
-
-
-require("dotenv").config();
-
 const app = express();
+const publicPath = path.join(__dirname, "../Public");
 
 app.use(express.json());
+app.use(express.static(publicPath));
 
 app.use("/api/users", userRoutes);
 app.use("/api/projects", projectRoutes);
@@ -28,28 +26,24 @@ app.use("/api/workflows", workflowRoutes);
 app.use("/api/history", historyRoutes);
 app.use("/api/auth", authRoutes);
 
-
-app.use(express.static(path.join(__dirname, "../public")));
-
 app.get("/", (req, res) => {
   res.redirect("/login");
 });
 
 app.get("/login", (req, res) => {
-  res.sendFile(path.join(__dirname, "../public/login.html"));
+  res.sendFile(path.join(publicPath, "login.html"));
 });
 
-app.get("/dashboard", (req, res) => {
-  res.sendFile(path.join(__dirname, "../public/index.html"));
+app.get(["/dashboard", "/projects/:id"], (req, res) => {
+  res.sendFile(path.join(publicPath, "index.html"));
 });
 
-app.get(/^\/(?!api|test-db|test-env|login|dashboard).*/, (req, res) => {
+app.get(/^\/(?!api|test-db|test-env|login|dashboard|projects).*/, (req, res) => {
   res.redirect("/login");
 });
 
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
   console.log(`Server berjalan di http://localhost:${PORT}`);
 });
-

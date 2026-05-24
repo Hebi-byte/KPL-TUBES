@@ -4,7 +4,7 @@ import { renderTasks } from './task.js';
 function renderMain(project, tasks, totalTaskCount = 0) {
   const title = escapeHtml(project?.nama_project || 'Project');
   const description = escapeHtml(
-    project?.deskripsi_project
+    project?.deskripsi
     || project?.description
     || 'Belum ada deskripsi project.'
   );

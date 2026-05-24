@@ -24,8 +24,6 @@ const getAllProjects = async (req, res) => {
     res.status(500).json({
       message: "Gagal mengambil data projects",
       error: error.message,
-      code: error.code,
-      sqlMessage: error.sqlMessage,
     });
   }
 };
@@ -52,9 +50,7 @@ const getProjectById = async (req, res) => {
     );
 
     if (rows.length === 0) {
-      return res.status(404).json({
-        message: "Project tidak ditemukan",
-      });
+      return res.status(404).json({ message: "Project tidak ditemukan" });
     }
 
     res.status(200).json({
@@ -65,42 +61,55 @@ const getProjectById = async (req, res) => {
     res.status(500).json({
       message: "Gagal mengambil detail project",
       error: error.message,
-      code: error.code,
-      sqlMessage: error.sqlMessage,
     });
   }
 };
 
 const createProject = async (req, res) => {
   try {
-    const { nama_project, deskripsi, created_by } = req.body;
+    const { nama_project, deskripsi } = req.body;
+    const created_by = req.user?.id_user;
 
-    if (!nama_project || !created_by) {
-      return res.status(400).json({
-        message: "nama_project dan created_by wajib diisi",
+    if (!nama_project || !nama_project.trim()) {
+      return res.status(400).json({ message: "nama_project wajib diisi" });
+    }
+
+    if (!created_by) {
+      return res.status(401).json({
+        message: "User login tidak ditemukan. Silakan login ulang.",
       });
     }
 
     const [result] = await db.query(
       "INSERT INTO projects (nama_project, deskripsi, created_by) VALUES (?, ?, ?)",
-      [nama_project, deskripsi || null, created_by]
+      [nama_project.trim(), deskripsi?.trim() || null, created_by]
+    );
+
+    const [rows] = await db.query(
+      `
+      SELECT
+        p.id_project,
+        p.nama_project,
+        p.deskripsi,
+        p.created_by,
+        u.nama_user AS creator,
+        p.created_at,
+        p.updated_at
+      FROM projects p
+      LEFT JOIN users u ON p.created_by = u.id_user
+      WHERE p.id_project = ?
+      `,
+      [result.insertId]
     );
 
     res.status(201).json({
       message: "Project berhasil dibuat",
-      data: {
-        id_project: result.insertId,
-        nama_project,
-        deskripsi: deskripsi || null,
-        created_by,
-      },
+      data: rows[0],
     });
   } catch (error) {
     res.status(500).json({
       message: "Gagal membuat project",
       error: error.message,
-      code: error.code,
-      sqlMessage: error.sqlMessage,
     });
   }
 };
@@ -110,37 +119,26 @@ const updateProject = async (req, res) => {
     const { id } = req.params;
     const { nama_project, deskripsi } = req.body;
 
-    if (!nama_project) {
-      return res.status(400).json({
-        message: "nama_project wajib diisi",
-      });
+    if (!nama_project || !nama_project.trim()) {
+      return res.status(400).json({ message: "nama_project wajib diisi" });
     }
 
     const [result] = await db.query(
       "UPDATE projects SET nama_project = ?, deskripsi = ? WHERE id_project = ?",
-      [nama_project, deskripsi || null, id]
+      [nama_project.trim(), deskripsi?.trim() || null, id]
     );
 
     if (result.affectedRows === 0) {
-      return res.status(404).json({
-        message: "Project tidak ditemukan",
-      });
+      return res.status(404).json({ message: "Project tidak ditemukan" });
     }
 
     res.status(200).json({
-      message: "Project berhasil diupdate",
-      data: {
-        id_project: Number(id),
-        nama_project,
-        deskripsi: deskripsi || null,
-      },
+      message: "Project berhasil diperbarui",
     });
   } catch (error) {
     res.status(500).json({
-      message: "Gagal mengupdate project",
+      message: "Gagal memperbarui project",
       error: error.message,
-      code: error.code,
-      sqlMessage: error.sqlMessage,
     });
   }
 };
@@ -155,9 +153,7 @@ const deleteProject = async (req, res) => {
     );
 
     if (result.affectedRows === 0) {
-      return res.status(404).json({
-        message: "Project tidak ditemukan",
-      });
+      return res.status(404).json({ message: "Project tidak ditemukan" });
     }
 
     res.status(200).json({
@@ -167,8 +163,6 @@ const deleteProject = async (req, res) => {
     res.status(500).json({
       message: "Gagal menghapus project",
       error: error.message,
-      code: error.code,
-      sqlMessage: error.sqlMessage,
     });
   }
 };
