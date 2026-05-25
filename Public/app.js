@@ -2,6 +2,7 @@ import { requireLogin, logout } from "./Content/auth.js";
 import { appEl, state } from "./Content/shared.js";
 import { renderSidebar, renderEmptyProject } from "./Content/sidebar.js";
 import { renderMain } from "./Content/main.js";
+import { escapeHtml } from "./Content/utils.js";
 
 const API = {
   projects: "/api/projects",
@@ -10,6 +11,24 @@ const API = {
 
 function getToken() {
   return localStorage.getItem("token");
+}
+
+function getCurrentUser() {
+  try {
+    return JSON.parse(localStorage.getItem("taskflow_user") || "{}") || {};
+  } catch (error) {
+    return {};
+  }
+}
+
+function getCurrentUserId() {
+  const user = getCurrentUser();
+  return Number(user.id_user || user.id || user.user_id || 0);
+}
+
+function getCurrentUserName() {
+  const user = getCurrentUser();
+  return user.nama_user || user.name || user.username || "User login";
 }
 
 async function apiFetch(url, options = {}) {
@@ -30,6 +49,7 @@ async function apiFetch(url, options = {}) {
   });
 
   let result = {};
+
   try {
     result = await response.json();
   } catch (error) {
@@ -58,6 +78,7 @@ async function loadData() {
   state.tasks = Array.isArray(taskResult.data) ? taskResult.data : [];
 
   const projectIdFromUrl = getProjectIdFromUrl();
+
   state.activeProjectId =
     projectIdFromUrl || state.activeProjectId || state.projects[0]?.id_project || null;
 }
@@ -109,11 +130,11 @@ function renderAddProjectModal(errorMessage = "") {
           ></textarea>
         </label>
 
-        ${errorMessage ? `<p class="login-message">${errorMessage}</p>` : ""}
+        ${errorMessage ? `<p class="login-message">${escapeHtml(errorMessage)}</p>` : ""}
         <button class="login-btn" id="saveProjectBtn" type="submit">Save Project</button>
       </form>
     </div>
-  `
+    `
   );
 
   document
@@ -135,19 +156,17 @@ function closeAddProjectModal() {
   document.getElementById("addProjectModal")?.remove();
 }
 
-
 async function handleCreateProject(event) {
   event.preventDefault();
 
   const form = event.currentTarget;
   const saveButton = document.getElementById("saveProjectBtn");
   const formData = new FormData(form);
+
   const nama_project = String(formData.get("nama_project") || "").trim();
   const deskripsi = String(formData.get("deskripsi") || "").trim();
 
-  if (!nama_project) {
-    return;
-  }
+  if (!nama_project) return;
 
   try {
     saveButton.disabled = true;
@@ -178,6 +197,118 @@ async function handleCreateProject(event) {
   }
 }
 
+function renderAddTaskModal(errorMessage = "") {
+  const assigneeName = getCurrentUserName();
+
+  document.body.insertAdjacentHTML(
+    "beforeend",
+    `
+    <div class="modal-backdrop" id="addTaskModal" role="dialog" aria-modal="true" aria-labelledby="addTaskTitle">
+      <form class="modal-card modal-form" id="addTaskForm">
+        <div class="modal-header">
+          <h3 id="addTaskTitle">Add Task</h3>
+          <button class="modal-close" id="closeTaskModal" type="button" aria-label="Close">×</button>
+        </div>
+
+        <label for="taskName">
+          Task name
+          <input
+            id="taskName"
+            name="judul_task"
+            type="text"
+            placeholder="Task baru"
+            required
+            autofocus
+          />
+        </label>
+
+        <label for="taskDescription">
+          Description
+          <textarea
+            id="taskDescription"
+            name="deskripsi_task"
+            placeholder="Deskripsi singkat"
+            rows="4"
+          ></textarea>
+        </label>
+
+        <label for="taskAssigneeAuto">
+          Assignee
+          <input id="taskAssigneeAuto" type="text" value="${escapeHtml(assigneeName)}" disabled />
+        </label>
+
+        <label for="taskStatusAuto">
+          Status
+          <input id="taskStatusAuto" type="text" value="pending" disabled />
+        </label>
+
+        ${errorMessage ? `<p class="login-message">${escapeHtml(errorMessage)}</p>` : ""}
+        <button class="login-btn" id="saveTaskBtn" type="submit">Save Task</button>
+      </form>
+    </div>
+    `
+  );
+
+  document
+    .getElementById("closeTaskModal")
+    ?.addEventListener("click", closeAddTaskModal);
+
+  document.getElementById("addTaskModal")?.addEventListener("click", (event) => {
+    if (event.target.id === "addTaskModal") {
+      closeAddTaskModal();
+    }
+  });
+
+  document
+    .getElementById("addTaskForm")
+    ?.addEventListener("submit", handleCreateTask);
+}
+
+function closeAddTaskModal() {
+  document.getElementById("addTaskModal")?.remove();
+}
+
+async function handleCreateTask(event) {
+  event.preventDefault();
+
+  const form = event.currentTarget;
+  const saveButton = document.getElementById("saveTaskBtn");
+  const formData = new FormData(form);
+
+  const judul_task = String(formData.get("judul_task") || "").trim();
+  const deskripsi_task = String(formData.get("deskripsi_task") || "").trim();
+  const created_by = getCurrentUserId();
+  const id_project = Number(state.activeProjectId);
+
+  if (!judul_task || !id_project || !created_by) {
+    closeAddTaskModal();
+    renderAddTaskModal("Task name, project, dan user login wajib tersedia.");
+    return;
+  }
+
+  try {
+    saveButton.disabled = true;
+    saveButton.textContent = "Saving...";
+
+    await apiFetch(API.tasks, {
+      method: "POST",
+      body: JSON.stringify({
+        id_project,
+        judul_task,
+        deskripsi_task,
+        created_by,
+      }),
+    });
+
+    closeAddTaskModal();
+    await loadData();
+    renderApp();
+  } catch (error) {
+    closeAddTaskModal();
+    renderAddTaskModal(error.message);
+  }
+}
+
 function renderApp() {
   let activeProject = getActiveProject();
 
@@ -190,6 +321,7 @@ function renderApp() {
     appEl.innerHTML = renderEmptyProject();
   } else {
     const activeTasks = getActiveTasks();
+
     appEl.innerHTML = `
       <div class="dashboard-shell">
         ${renderSidebar()}
@@ -205,6 +337,7 @@ function bindEvents() {
   document.querySelectorAll(".project-link").forEach((link) => {
     link.addEventListener("click", (event) => {
       event.preventDefault();
+
       state.activeProjectId = Number(link.dataset.projectId);
       history.pushState({}, "", `/projects/${state.activeProjectId}`);
       renderApp();
@@ -214,6 +347,14 @@ function bindEvents() {
   document
     .getElementById("addProjectBtn")
     ?.addEventListener("click", () => renderAddProjectModal());
+
+  document
+    .getElementById("addTaskBtn")
+    ?.addEventListener("click", () => renderAddTaskModal());
+
+  document
+    .getElementById("mobileAddTaskBtn")
+    ?.addEventListener("click", () => renderAddTaskModal());
 
   document.getElementById("logoutBtn")?.addEventListener("click", logout);
   document.getElementById("mobileLogoutBtn")?.addEventListener("click", logout);
@@ -230,7 +371,7 @@ async function init() {
       <main class="main-content">
         <div class="empty-state big">
           <h2>Gagal memuat dashboard</h2>
-          <p>${error.message}</p>
+          <p>${escapeHtml(error.message)}</p>
         </div>
       </main>
     `;

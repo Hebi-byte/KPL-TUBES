@@ -72,9 +72,7 @@ const getTaskById = async (req, res) => {
     );
 
     if (rows.length === 0) {
-      return res.status(404).json({
-        message: "Task tidak ditemukan",
-      });
+      return res.status(404).json({ message: "Task tidak ditemukan" });
     }
 
     res.status(200).json({
@@ -97,74 +95,62 @@ const createTask = async (req, res) => {
       id_project,
       judul_task,
       deskripsi_task,
-      id_status,
       created_by,
-      assigned_to,
       due_date,
     } = req.body;
 
-    if (!id_project || !judul_task || !id_status || !created_by) {
+    const cleanTitle = String(judul_task || "").trim();
+    const projectId = Number(id_project);
+
+    // Pembuat task diambil dari user login yang dikirim frontend.
+    // assigned_to otomatis disamakan dengan created_by.
+    const creatorId = Number(
+      req.user?.id_user ||
+      req.user?.id ||
+      created_by ||
+      req.body.id_user ||
+      req.body.user_id
+    );
+
+    if (!projectId || !cleanTitle || !creatorId) {
       return res.status(400).json({
-        message: "id_project, judul_task, id_status, dan created_by wajib diisi",
+        message: "id_project, judul_task, dan created_by wajib diisi",
       });
     }
-    
-  // CEK STATUS TASK SAAT INI
-  const [currentTask] = await db.query(
-    `
-    SELECT id_status
-    FROM tasks
-    WHERE id_task = ?
-    `,
-    [id]
-  );
 
-  if (currentTask.length === 0) {
-    return res.status(404).json({
-      message: "Task tidak ditemukan",
-    });
-  }
+    const [pendingRows] = await db.query(
+      `
+      SELECT id_status, nama_status
+      FROM statuses
+      WHERE LOWER(TRIM(nama_status)) = 'pending'
+         OR LOWER(TRIM(nama_status)) LIKE '%pending%'
+      ORDER BY id_status ASC
+      LIMIT 1
+      `
+    );
 
-  const currentStatus = currentTask[0].id_status;
+    if (pendingRows.length === 0) {
+      return res.status(400).json({
+        message: "Status pending belum ada di tabel statuses",
+      });
+    }
 
-  // VALIDASI WORKFLOW
-  const [workflow] = await db.query(
-    `
-    SELECT *
-    FROM workflow
-    WHERE route_name = ?
-    AND status_asal = ?
-    AND status_tujuan = ?
-    AND id_role = ?
-    AND is_active = 1
-    `,
-    [
-      "task.update",
-      currentStatus,
-      id_status,
-      id_role,
-    ]
-  );
-
-if (workflow.length === 0) {
-  return res.status(403).json({
-    message: "Perpindahan status tidak diizinkan",
-  });
-}
+    const pendingStatus = pendingRows[0];
+    const assignedTo = creatorId;
 
     const [result] = await db.query(
       `
       INSERT INTO tasks
-      (id_project, judul_task, deskripsi_task, id_status, created_by, assigned_to, due_date)
+        (id_project, judul_task, deskripsi_task, id_status, created_by, assigned_to, due_date)
       VALUES (?, ?, ?, ?, ?, ?, ?)
       `,
       [
-        id_project,
-        judul_task,
+        projectId,
+        cleanTitle,
         deskripsi_task || null,
-        id_status,
-        created_by,
-        assigned_to || null,
+        pendingStatus.id_status,
+        creatorId,
+        assignedTo,
         due_date || null,
       ]
     );
@@ -173,12 +159,13 @@ if (workflow.length === 0) {
       message: "Task berhasil dibuat",
       data: {
         id_task: result.insertId,
-        id_project,
-        judul_task,
+        id_project: projectId,
+        judul_task: cleanTitle,
         deskripsi_task: deskripsi_task || null,
-        id_status,
-        created_by,
-        assigned_to: assigned_to || null,
+        id_status: pendingStatus.id_status,
+        nama_status: pendingStatus.nama_status,
+        created_by: creatorId,
+        assigned_to: assignedTo,
         due_date: due_date || null,
       },
     });
@@ -202,7 +189,6 @@ const updateTask = async (req, res) => {
       id_status,
       assigned_to,
       due_date,
-      id_role,
     } = req.body;
 
     if (!id_project || !judul_task || !id_status) {
@@ -234,9 +220,7 @@ const updateTask = async (req, res) => {
     );
 
     if (result.affectedRows === 0) {
-      return res.status(404).json({
-        message: "Task tidak ditemukan",
-      });
+      return res.status(404).json({ message: "Task tidak ditemukan" });
     }
 
     res.status(200).json({
@@ -265,20 +249,13 @@ const deleteTask = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const [result] = await db.query(
-      "DELETE FROM tasks WHERE id_task = ?",
-      [id]
-    );
+    const [result] = await db.query("DELETE FROM tasks WHERE id_task = ?", [id]);
 
     if (result.affectedRows === 0) {
-      return res.status(404).json({
-        message: "Task tidak ditemukan",
-      });
+      return res.status(404).json({ message: "Task tidak ditemukan" });
     }
 
-    res.status(200).json({
-      message: "Task berhasil dihapus",
-    });
+    res.status(200).json({ message: "Task berhasil dihapus" });
   } catch (error) {
     res.status(500).json({
       message: "Gagal menghapus task",
