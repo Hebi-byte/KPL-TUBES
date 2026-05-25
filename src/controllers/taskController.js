@@ -1,4 +1,11 @@
 const db = require("../config/database");
+const jwt = require("jsonwebtoken");
+
+const ROLE_BY_ID = {
+  1: "owner",
+  2: "read",
+  3: "edit",
+};
 
 function normalizeDateTime(value) {
   const clean = String(value || "").trim();
@@ -19,6 +26,72 @@ function normalizeDateTime(value) {
   return clean.replace("T", " ");
 }
 
+function normalizeRoleName(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function getRoleName(user) {
+  return normalizeRoleName(user?.nama_role) || ROLE_BY_ID[Number(user?.id_role)] || "";
+}
+
+function hasAnyRole(user, allowedRoles = []) {
+  const roleName = getRoleName(user);
+  return allowedRoles.includes(roleName);
+}
+
+function getUserIdFromToken(req) {
+  const authHeader = req.headers?.authorization || "";
+  const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+
+  if (!token) return 0;
+
+  try {
+    const decoded = process.env.JWT_SECRET
+      ? jwt.verify(token, process.env.JWT_SECRET)
+      : jwt.decode(token);
+
+    return Number(decoded?.id_user || decoded?.id || decoded?.user_id || 0);
+  } catch (error) {
+    return 0;
+  }
+}
+
+function getActorId(req) {
+  return Number(
+    req.user?.id_user ||
+      req.user?.id ||
+      getUserIdFromToken(req) ||
+      req.body?.created_by ||
+      req.body?.updated_by ||
+      req.body?.deleted_by ||
+      req.body?.id_user ||
+      req.body?.user_id ||
+      0
+  );
+}
+
+async function getActor(req) {
+  const actorId = getActorId(req);
+
+  if (!actorId) return null;
+
+  const [rows] = await db.query(
+    `
+    SELECT u.id_user, u.nama_user, u.email, u.id_role, r.nama_role
+    FROM users u
+    LEFT JOIN roles r ON u.id_role = r.id_role
+    WHERE u.id_user = ?
+    LIMIT 1
+    `,
+    [actorId]
+  );
+
+  return rows[0] || null;
+}
+
+function forbidden(res, message) {
+  return res.status(403).json({ message });
+}
 
 const getAllTasks = async (req, res) => {
   try {
@@ -111,32 +184,33 @@ const getTaskById = async (req, res) => {
 
 const createTask = async (req, res) => {
   try {
-    const {
-      id_project,
-      judul_task,
-      deskripsi_task,
-      created_by,
-      due_date,
-      waktu_task,
-    } = req.body;
+    const { id_project, judul_task, deskripsi_task, due_date, waktu_task } = req.body;
 
     const cleanTitle = String(judul_task || "").trim();
     const projectId = Number(id_project);
+    const actor = await getActor(req);
 
-    // Pembuat task diambil dari user login yang dikirim frontend.
-    // assigned_to otomatis disamakan dengan created_by.
-    const creatorId = Number(
-      req.user?.id_user ||
-      req.user?.id ||
-      created_by ||
-      req.body.id_user ||
-      req.body.user_id
+    if (!actor) {
+      return res.status(401).json({ message: "User login tidak ditemukan" });
+    }
+
+    if (!hasAnyRole(actor, ["owner", "edit"])) {
+      return forbidden(res, "Role kamu hanya bisa melihat, tidak boleh menambah task");
+    }
+
+    if (!projectId || !cleanTitle) {
+      return res.status(400).json({
+        message: "id_project dan judul_task wajib diisi",
+      });
+    }
+
+    const [projectRows] = await db.query(
+      "SELECT id_project FROM projects WHERE id_project = ? LIMIT 1",
+      [projectId]
     );
 
-    if (!projectId || !cleanTitle || !creatorId) {
-      return res.status(400).json({
-        message: "id_project, judul_task, dan created_by wajib diisi",
-      });
+    if (projectRows.length === 0) {
+      return res.status(404).json({ message: "Project tidak ditemukan" });
     }
 
     const [pendingRows] = await db.query(
@@ -157,9 +231,9 @@ const createTask = async (req, res) => {
     }
 
     const pendingStatus = pendingRows[0];
-    const assignedTo = creatorId;
     const taskDate = normalizeDateTime(due_date || waktu_task);
 
+    // Pembuat dan assignee otomatis dari akun yang sedang login.
     const [result] = await db.query(
       `
       INSERT INTO tasks
@@ -171,8 +245,8 @@ const createTask = async (req, res) => {
         cleanTitle,
         deskripsi_task || null,
         pendingStatus.id_status,
-        creatorId,
-        assignedTo,
+        actor.id_user,
+        actor.id_user,
         taskDate,
       ]
     );
@@ -186,8 +260,9 @@ const createTask = async (req, res) => {
         deskripsi_task: deskripsi_task || null,
         id_status: pendingStatus.id_status,
         nama_status: pendingStatus.nama_status,
-        created_by: creatorId,
-        assigned_to: assignedTo,
+        created_by: actor.id_user,
+        assigned_to: actor.id_user,
+        assignee: actor.nama_user,
         due_date: taskDate,
         waktu_task: taskDate,
       },
@@ -210,26 +285,22 @@ const updateTask = async (req, res) => {
     const taskId = Number(id);
     const cleanTitle = String(judul_task || "").trim();
     const statusId = Number(id_status);
+    const actor = await getActor(req);
 
-    // User yang sedang login / sedang edit task.
-    // Kalau backend punya middleware auth, ambil dari req.user.
-    // Kalau belum, frontend mengirim updated_by dari localStorage user login.
-    const editorId = Number(
-      req.user?.id_user ||
-      req.user?.id ||
-      req.body.updated_by ||
-      req.body.edited_by ||
-      req.body.id_user ||
-      req.body.user_id
-    );
+    if (!actor) {
+      return res.status(401).json({ message: "User login tidak ditemukan" });
+    }
 
-    if (!taskId || !cleanTitle || !statusId || !editorId) {
+    if (!hasAnyRole(actor, ["owner", "edit"])) {
+      return forbidden(res, "Role kamu hanya bisa melihat, tidak boleh mengedit task");
+    }
+
+    if (!taskId || !cleanTitle || !statusId) {
       return res.status(400).json({
-        message: "Nama task, status, dan user login wajib tersedia",
+        message: "Nama task dan status wajib tersedia",
       });
     }
 
-    // Pastikan task-nya ada dulu.
     const [taskRows] = await db.query(
       "SELECT id_task FROM tasks WHERE id_task = ? LIMIT 1",
       [taskId]
@@ -239,7 +310,6 @@ const updateTask = async (req, res) => {
       return res.status(404).json({ message: "Task tidak ditemukan" });
     }
 
-    // Pastikan status yang dipilih memang ada di tabel statuses.
     const [statusRows] = await db.query(
       "SELECT id_status, nama_status FROM statuses WHERE id_status = ? LIMIT 1",
       [statusId]
@@ -247,16 +317,6 @@ const updateTask = async (req, res) => {
 
     if (statusRows.length === 0) {
       return res.status(400).json({ message: "Status yang dipilih tidak ditemukan" });
-    }
-
-    // Pastikan user yang mengedit memang ada.
-    const [editorRows] = await db.query(
-      "SELECT id_user, nama_user FROM users WHERE id_user = ? LIMIT 1",
-      [editorId]
-    );
-
-    if (editorRows.length === 0) {
-      return res.status(400).json({ message: "User editor tidak ditemukan" });
     }
 
     // Field yang diinput user tetap cuma nama, deskripsi, dan status.
@@ -270,7 +330,7 @@ const updateTask = async (req, res) => {
           assigned_to = ?
       WHERE id_task = ?
       `,
-      [cleanTitle, deskripsi_task || null, statusId, editorId, taskId]
+      [cleanTitle, deskripsi_task || null, statusId, actor.id_user, taskId]
     );
 
     res.status(200).json({
@@ -281,8 +341,8 @@ const updateTask = async (req, res) => {
         deskripsi_task: deskripsi_task || null,
         id_status: statusRows[0].id_status,
         nama_status: statusRows[0].nama_status,
-        assigned_to: editorRows[0].id_user,
-        assignee: editorRows[0].nama_user,
+        assigned_to: actor.id_user,
+        assignee: actor.nama_user,
       },
     });
   } catch (error) {
@@ -298,6 +358,15 @@ const updateTask = async (req, res) => {
 const deleteTask = async (req, res) => {
   try {
     const { id } = req.params;
+    const actor = await getActor(req);
+
+    if (!actor) {
+      return res.status(401).json({ message: "User login tidak ditemukan" });
+    }
+
+    if (!hasAnyRole(actor, ["owner"])) {
+      return forbidden(res, "Role kamu tidak boleh menghapus task");
+    }
 
     const [result] = await db.query("DELETE FROM tasks WHERE id_task = ?", [id]);
 

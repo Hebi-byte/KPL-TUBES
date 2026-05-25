@@ -2,64 +2,80 @@ import { escapeHtml } from './utils.js';
 import { state } from './shared.js';
 
 function renderSidebar() {
-  const projectLinks = state.projects.map((project) => {
-    const isActive = Number(project.id_project) === Number(state.activeProjectId);
-    return `
-      <a href="/projects/${project.id_project}"
-         class="project-link ${isActive ? 'active' : ''}"
-         data-project-id="${project.id_project}">
-        <span class="folder-icon" aria-hidden="true"></span>
-        <span>${escapeHtml(project.nama_project)}</span>
-      </a>
-    `;
-  }).join('');
+  const canManageProjects = Boolean(state.permissions?.canManageProjects);
+
+  const projectLinks = state.projects
+    .map((project) => {
+      const isActive = Number(project.id_project) === Number(state.activeProjectId);
+
+      return `
+        <a
+          class="project-link ${isActive ? 'active' : ''}"
+          href="/projects/${escapeHtml(project.id_project)}"
+          data-project-id="${escapeHtml(project.id_project)}"
+        >
+          <span class="folder-icon"></span>
+          <span>${escapeHtml(project.nama_project)}</span>
+        </a>
+      `;
+    })
+    .join('');
 
   return `
     <aside class="sidebar">
-      <div class="logo">
-        <h1>TaskFlow</h1>
+      <div class="brand">TaskFlow</div>
+
+      <div class="sidebar-section-title">My Project</div>
+
+      <nav class="project-nav" aria-label="Project navigation">
+        ${projectLinks || '<p class="sidebar-empty">Belum ada project.</p>'}
+      </nav>
+
+      <div class="sidebar-actions">
+        ${
+          canManageProjects
+            ? `
+              <button class="sidebar-btn add-project" id="addProjectBtn" type="button">
+                <span>＋</span> Add Project
+              </button>
+            `
+            : ''
+        }
+
+        <button class="sidebar-btn logout" id="logoutBtn" type="button">
+          <span>↪</span> Logout
+        </button>
       </div>
 
-      <section class="project-section">
-        <p class="sidebar-title">My Project</p>
-        <nav class="project-nav" aria-label="Project list">
-          ${projectLinks}
-        </nav>
-      </section>
-
-      <div class="sidebar-bottom">
-        <button class="add-project-btn" id="addProjectBtn" type="button">
-          <span class="icon-plus" aria-hidden="true"></span>
-          <span>Add Project</span>
-        </button>
-
-        <button class="logout-btn" id="logoutBtn" type="button">
-          <span class="icon-logout" aria-hidden="true"></span>
-          <span>Logout</span>
-        </button>
-
-        <a class="settings-link" href="#">
-          <span class="icon-gear" aria-hidden="true"></span>
-          <span>Setting</span>
-        </a>
+      <div class="setting-link">
+        <span>⚙</span> Setting
       </div>
     </aside>
   `;
 }
 
 function renderEmptyProject() {
+  const canManageProjects = Boolean(state.permissions?.canManageProjects);
+
   return `
     <div class="dashboard-shell">
       <aside class="sidebar">
-        <div class="logo"><h1>TaskFlow</h1></div>
-        <section class="project-section">
-          <p class="sidebar-title">My Project</p>
-          <p class="empty-sidebar">Belum ada project.</p>
-        </section>
-        <div class="sidebar-bottom">
-          <button class="add-project-btn" id="addProjectBtn" type="button">
-            <span class="icon-plus" aria-hidden="true"></span>
-            <span>Add Project</span>
+        <div class="brand">TaskFlow</div>
+        <div class="sidebar-section-title">My Project</div>
+        <p class="sidebar-empty">Belum ada project.</p>
+
+        <div class="sidebar-actions">
+          ${
+            canManageProjects
+              ? `
+                <button class="sidebar-btn add-project" id="addProjectBtn" type="button">
+                  <span>＋</span> Add Project
+                </button>
+              `
+              : ''
+          }
+          <button class="sidebar-btn logout" id="logoutBtn" type="button">
+            <span>↪</span> Logout
           </button>
         </div>
       </aside>
@@ -67,7 +83,13 @@ function renderEmptyProject() {
       <main class="main-content">
         <div class="empty-state big">
           <h2>Belum ada project</h2>
-          <p>Klik Add Project untuk membuat project baru.</p>
+          <p>
+            ${
+              canManageProjects
+                ? 'Klik Add Project untuk membuat project baru.'
+                : 'Role kamu hanya bisa melihat data yang sudah tersedia.'
+            }
+          </p>
         </div>
       </main>
     </div>

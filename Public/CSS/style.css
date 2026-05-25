@@ -137,15 +137,15 @@ button {
   background: transparent;
 }
 
-.sidebar-bottom {
+.sidebar-actions {
   margin-top: auto;
   display: flex;
   flex-direction: column;
   gap: 18px;
 }
 
-.add-project-btn,
-.logout-btn {
+.sidebar-btn.add-project,
+.sidebar-btn.logout {
   border: 1.8px solid var(--primary);
   background: transparent;
   color: var(--primary);
@@ -159,14 +159,14 @@ button {
   transition: background 160ms ease, color 160ms ease, transform 160ms ease;
 }
 
-.add-project-btn:hover,
-.logout-btn:hover {
+.sidebar-btn.add-project:hover,
+.sidebar-btn.logout:hover {
   background: var(--primary);
   color: #ffffff;
   transform: translateY(-1px);
 }
 
-.logout-btn {
+.logoutBtn {
   border-color: #dfd5ff;
   color: #756d86;
 }

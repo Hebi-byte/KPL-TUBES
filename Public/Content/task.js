@@ -1,4 +1,5 @@
 import { escapeHtml, normalizeStatus, getInitial } from './utils.js';
+import { state } from './shared.js';
 
 function formatTaskTime(value) {
   if (!value) return 'Belum ada waktu';
@@ -29,6 +30,8 @@ function renderTasks(tasks) {
     `;
   }
 
+  const canManageTasks = Boolean(state.permissions?.canManageTasks);
+
   return tasks
     .map((task) => {
       const statusText = task.nama_status || task.status || 'pending';
@@ -41,7 +44,7 @@ function renderTasks(tasks) {
       return `
         <div class="task-row" data-task-id="${escapeHtml(task.id_task || '')}">
           <div class="task-cell task-name">
-            <button class="check-circle" type="button" data-complete-task="${escapeHtml(task.id_task || '')}" aria-label="Complete task">✓</button>
+            <button class="check-circle" type="button" data-complete-task="${escapeHtml(task.id_task || '')}" aria-label="Complete task" ${canManageTasks ? '' : 'disabled'}>✓</button>
             <div class="task-title-wrap">
               <div class="task-title">${escapeHtml(task.judul_task || task.nama_task || 'Untitled Task')}</div>
               ${desc ? `<div class="task-desc">${escapeHtml(desc)}</div>` : ''}
@@ -64,9 +67,15 @@ function renderTasks(tasks) {
             <span class="status-badge ${escapeHtml(statusClass)}">${escapeHtml(statusText)}</span>
           </div>
 
-          <button class="task-cell task-edit" type="button" data-edit-task="${escapeHtml(task.id_task || '')}">
-            Edit
-          </button>
+          ${
+            canManageTasks
+              ? `
+                <button class="task-cell task-edit" type="button" data-edit-task="${escapeHtml(task.id_task || '')}">
+                  Edit
+                </button>
+              `
+              : '<div class="task-cell task-readonly">View</div>'
+          }
         </div>
       `;
     })

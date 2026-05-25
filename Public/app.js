@@ -11,6 +11,12 @@ const API = {
   statusEndpoints: ["/api/statuses", "/api/status"],
 };
 
+const ROLE_BY_ID = {
+  1: "owner",
+  2: "read",
+  3: "edit",
+};
+
 function getToken() {
   return localStorage.getItem("token");
 }
@@ -31,6 +37,36 @@ function getCurrentUserId() {
 function getCurrentUserName() {
   const user = getCurrentUser();
   return user.nama_user || user.name || user.username || "User login";
+}
+
+function normalizeRoleName(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function getCurrentRoleName() {
+  const user = getCurrentUser();
+  return normalizeRoleName(user.nama_role || user.role || ROLE_BY_ID[Number(user.id_role)]) || "read";
+}
+
+function refreshPermissions() {
+  const roleName = getCurrentRoleName();
+
+  state.permissions = {
+    roleName,
+    canManageProjects: roleName === "owner",
+    canManageTasks: roleName === "owner" || roleName === "edit",
+    readOnly: roleName === "read",
+  };
+
+  return state.permissions;
+}
+
+function canManageProjects() {
+  return Boolean(refreshPermissions().canManageProjects);
+}
+
+function canManageTasks() {
+  return Boolean(refreshPermissions().canManageTasks);
 }
 
 async function apiFetch(url, options = {}) {
@@ -71,6 +107,8 @@ function getProjectIdFromUrl() {
 }
 
 async function loadData() {
+  refreshPermissions();
+
   const [projectResult, taskResult] = await Promise.all([
     apiFetch(API.projects),
     apiFetch(API.tasks),
@@ -219,6 +257,18 @@ function injectTaskTimeStyles() {
       background: rgba(109, 80, 214, 0.08);
     }
 
+    .task-readonly {
+      color: var(--muted, #8d899a);
+      font-size: 0.82rem;
+      font-weight: 800;
+      justify-content: center;
+    }
+
+    .check-circle:disabled {
+      cursor: default;
+      opacity: 0.55;
+    }
+
     @media (max-width: 980px) {
       .table-header,
       .task-row {
@@ -237,6 +287,11 @@ function injectTaskTimeStyles() {
 }
 
 function renderAddProjectModal(errorMessage = "") {
+  if (!canManageProjects()) {
+    alert("Role kamu tidak boleh menambah project.");
+    return;
+  }
+
   document.body.insertAdjacentHTML(
     "beforeend",
     `
@@ -298,14 +353,21 @@ function closeAddProjectModal() {
 async function handleCreateProject(event) {
   event.preventDefault();
 
+  if (!canManageProjects()) {
+    closeAddProjectModal();
+    alert("Role kamu tidak boleh menambah project.");
+    return;
+  }
+
   const form = event.currentTarget;
   const saveButton = document.getElementById("saveProjectBtn");
   const formData = new FormData(form);
 
   const nama_project = String(formData.get("nama_project") || "").trim();
   const deskripsi = String(formData.get("deskripsi") || "").trim();
+  const created_by = getCurrentUserId();
 
-  if (!nama_project) return;
+  if (!nama_project || !created_by) return;
 
   try {
     saveButton.disabled = true;
@@ -316,6 +378,7 @@ async function handleCreateProject(event) {
       body: JSON.stringify({
         nama_project,
         deskripsi,
+        created_by,
       }),
     });
 
@@ -337,6 +400,11 @@ async function handleCreateProject(event) {
 }
 
 function renderAddTaskModal(errorMessage = "") {
+  if (!canManageTasks()) {
+    alert("Role kamu hanya bisa melihat, tidak boleh menambah task.");
+    return;
+  }
+
   const assigneeName = getCurrentUserName();
 
   document.body.insertAdjacentHTML(
@@ -369,15 +437,6 @@ function renderAddTaskModal(errorMessage = "") {
             placeholder="Deskripsi singkat"
             rows="4"
           ></textarea>
-        </label>
-
-        <label for="taskDueDate">
-          Waktu / Deadline
-          <input
-            id="taskDueDate"
-            name="due_date"
-            type="datetime-local"
-          />
         </label>
 
         <label for="taskAssigneeAuto">
@@ -418,6 +477,12 @@ function closeAddTaskModal() {
 
 async function handleCreateTask(event) {
   event.preventDefault();
+
+  if (!canManageTasks()) {
+    closeAddTaskModal();
+    alert("Role kamu hanya bisa melihat, tidak boleh menambah task.");
+    return;
+  }
 
   const form = event.currentTarget;
   const saveButton = document.getElementById("saveTaskBtn");
@@ -475,6 +540,11 @@ function renderStatusOptions(selectedStatusId) {
 }
 
 function renderEditTaskModal(taskId, errorMessage = "") {
+  if (!canManageTasks()) {
+    alert("Role kamu hanya bisa melihat, tidak boleh mengedit task.");
+    return;
+  }
+
   const task = findTaskById(taskId);
 
   if (!task) {
@@ -559,6 +629,12 @@ function closeEditTaskModal() {
 async function handleUpdateTask(event) {
   event.preventDefault();
 
+  if (!canManageTasks()) {
+    closeEditTaskModal();
+    alert("Role kamu hanya bisa melihat, tidak boleh mengedit task.");
+    return;
+  }
+
   const form = event.currentTarget;
   const taskId = Number(form.dataset.taskId);
   const updateButton = document.getElementById("updateTaskBtn");
@@ -599,6 +675,7 @@ async function handleUpdateTask(event) {
 }
 
 function renderApp() {
+  refreshPermissions();
   let activeProject = getActiveProject();
 
   if (!activeProject && state.projects.length > 0) {
@@ -657,6 +734,7 @@ function bindEvents() {
 
 async function init() {
   requireLogin();
+  refreshPermissions();
   injectTaskTimeStyles();
 
   try {

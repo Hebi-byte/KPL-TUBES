@@ -7,6 +7,12 @@ const state = {
   statuses: [],
   activeProjectId: null,
   showCompleted: true,
+  permissions: {
+    roleName: 'read',
+    canManageProjects: false,
+    canManageTasks: false,
+    readOnly: true,
+  },
 };
 
 export { appEl, state };

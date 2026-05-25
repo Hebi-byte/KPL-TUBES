@@ -1,4 +1,5 @@
 import { escapeHtml } from './utils.js';
+import { state } from './shared.js';
 import { renderTasks } from './task.js';
 
 function renderMain(project, tasks, totalTaskCount = 0) {
@@ -10,6 +11,7 @@ function renderMain(project, tasks, totalTaskCount = 0) {
       'Belum ada deskripsi project.'
   );
   const taskLabel = `${Number(totalTaskCount) || 0} Task${Number(totalTaskCount) === 1 ? '' : 's'}`;
+  const canManageTasks = Boolean(state.permissions?.canManageTasks);
 
   return `
     <main class="main-content">
@@ -41,14 +43,20 @@ function renderMain(project, tasks, totalTaskCount = 0) {
         <button class="toolbar-btn" id="sortTaskBtn" type="button">
           <span class="icon-sort"></span>Sort
         </button>
-        <div class="add-task-group">
-          <button class="toolbar-btn" id="addTaskBtn" type="button">
-            <span class="icon-plus"></span>Add task
-          </button>
-          <button class="toolbar-btn dropdown-btn" type="button" aria-label="Open task menu">
-            <span class="icon-chevron"></span>
-          </button>
-        </div>
+        ${
+          canManageTasks
+            ? `
+              <div class="add-task-group">
+                <button class="toolbar-btn" id="addTaskBtn" type="button">
+                  <span class="icon-plus"></span>Add task
+                </button>
+                <button class="toolbar-btn dropdown-btn" type="button" aria-label="Open task menu">
+                  <span class="icon-chevron"></span>
+                </button>
+              </div>
+            `
+            : ''
+        }
       </section>
 
       <section class="task-table">
@@ -57,7 +65,7 @@ function renderMain(project, tasks, totalTaskCount = 0) {
           <div><span class="icon-time">◷</span>Waktu</div>
           <div><span class="icon-users"></span>Assignee</div>
           <div><span class="icon-status"></span>Status</div>
-          <div class="add-column">+</div>
+          <div class="add-column">${canManageTasks ? '+' : ''}</div>
         </div>
 
         <div class="task-content">
@@ -74,7 +82,7 @@ function renderMain(project, tasks, totalTaskCount = 0) {
 
     <nav class="mobile-nav" aria-label="Mobile navigation">
       <a href="/" aria-label="Home">⌂</a>
-      <button id="mobileAddTaskBtn" type="button" aria-label="Add task">＋</button>
+      ${canManageTasks ? '<button id="mobileAddTaskBtn" type="button" aria-label="Add task">＋</button>' : ''}
       <button id="mobileLogoutBtn" type="button" aria-label="Logout">↪</button>
     </nav>
   `;
