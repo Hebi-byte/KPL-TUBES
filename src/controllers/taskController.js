@@ -1,5 +1,25 @@
 const db = require("../config/database");
 
+function normalizeDateTime(value) {
+  const clean = String(value || "").trim();
+
+  if (!clean) {
+    return null;
+  }
+
+  // Input dari <input type="datetime-local"> biasanya: YYYY-MM-DDTHH:mm
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(clean)) {
+    return `${clean.replace("T", " ")}:00`;
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(clean)) {
+    return clean.replace("T", " ");
+  }
+
+  return clean.replace("T", " ");
+}
+
+
 const getAllTasks = async (req, res) => {
   try {
     const [rows] = await db.query(`
@@ -97,6 +117,7 @@ const createTask = async (req, res) => {
       deskripsi_task,
       created_by,
       due_date,
+      waktu_task,
     } = req.body;
 
     const cleanTitle = String(judul_task || "").trim();
@@ -137,6 +158,7 @@ const createTask = async (req, res) => {
 
     const pendingStatus = pendingRows[0];
     const assignedTo = creatorId;
+    const taskDate = normalizeDateTime(due_date || waktu_task);
 
     const [result] = await db.query(
       `
@@ -151,7 +173,7 @@ const createTask = async (req, res) => {
         pendingStatus.id_status,
         creatorId,
         assignedTo,
-        due_date || null,
+        taskDate,
       ]
     );
 
@@ -166,7 +188,8 @@ const createTask = async (req, res) => {
         nama_status: pendingStatus.nama_status,
         created_by: creatorId,
         assigned_to: assignedTo,
-        due_date: due_date || null,
+        due_date: taskDate,
+        waktu_task: taskDate,
       },
     });
   } catch (error) {
@@ -189,6 +212,7 @@ const updateTask = async (req, res) => {
       id_status,
       assigned_to,
       due_date,
+      waktu_task,
     } = req.body;
 
     if (!id_project || !judul_task || !id_status) {
@@ -196,6 +220,8 @@ const updateTask = async (req, res) => {
         message: "id_project, judul_task, dan id_status wajib diisi",
       });
     }
+
+    const taskDate = normalizeDateTime(due_date || waktu_task);
 
     const [result] = await db.query(
       `
@@ -214,7 +240,7 @@ const updateTask = async (req, res) => {
         deskripsi_task || null,
         id_status,
         assigned_to || null,
-        due_date || null,
+        taskDate,
         id,
       ]
     );
@@ -232,7 +258,8 @@ const updateTask = async (req, res) => {
         deskripsi_task: deskripsi_task || null,
         id_status,
         assigned_to: assigned_to || null,
-        due_date: due_date || null,
+        due_date: taskDate,
+        waktu_task: taskDate,
       },
     });
   } catch (error) {

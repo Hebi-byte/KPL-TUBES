@@ -97,6 +97,64 @@ function getActiveTasks() {
   );
 }
 
+
+function injectTaskTimeStyles() {
+  if (document.getElementById("taskTimeStyle")) return;
+
+  const style = document.createElement("style");
+  style.id = "taskTimeStyle";
+  style.textContent = `
+    .table-header,
+    .task-row {
+      grid-template-columns: minmax(280px, 1fr) 180px 215px 145px 43px;
+    }
+
+    .task-time-wrap {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .task-time-label {
+      color: var(--muted, #8d899a);
+      font-size: 0.72rem;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .task-time-value {
+      color: #3e3d4d;
+      font-size: 0.82rem;
+      font-weight: 800;
+      line-height: 1.2;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .icon-time {
+      font-size: 1rem;
+      line-height: 1;
+    }
+
+    @media (max-width: 980px) {
+      .table-header,
+      .task-row {
+        grid-template-columns: minmax(240px, 1fr) 160px 160px 130px 36px;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .table-header,
+      .task-row {
+        min-width: 860px;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
 function renderAddProjectModal(errorMessage = "") {
   document.body.insertAdjacentHTML(
     "beforeend",
@@ -232,6 +290,15 @@ function renderAddTaskModal(errorMessage = "") {
           ></textarea>
         </label>
 
+        <label for="taskDueDate">
+          Waktu / Deadline
+          <input
+            id="taskDueDate"
+            name="due_date"
+            type="datetime-local"
+          />
+        </label>
+
         <label for="taskAssigneeAuto">
           Assignee
           <input id="taskAssigneeAuto" type="text" value="${escapeHtml(assigneeName)}" disabled />
@@ -277,6 +344,7 @@ async function handleCreateTask(event) {
 
   const judul_task = String(formData.get("judul_task") || "").trim();
   const deskripsi_task = String(formData.get("deskripsi_task") || "").trim();
+  const due_date = String(formData.get("due_date") || "").trim();
   const created_by = getCurrentUserId();
   const id_project = Number(state.activeProjectId);
 
@@ -296,6 +364,7 @@ async function handleCreateTask(event) {
         id_project,
         judul_task,
         deskripsi_task,
+        due_date: due_date || null,
         created_by,
       }),
     });
@@ -362,6 +431,7 @@ function bindEvents() {
 
 async function init() {
   requireLogin();
+  injectTaskTimeStyles();
 
   try {
     await loadData();
