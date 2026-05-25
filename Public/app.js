@@ -7,6 +7,8 @@ import { escapeHtml } from "./Content/utils.js";
 const API = {
   projects: "/api/projects",
   tasks: "/api/tasks",
+  // Di beberapa versi project route status bisa beda nama, jadi frontend coba dua endpoint ini.
+  statusEndpoints: ["/api/statuses", "/api/status"],
 };
 
 function getToken() {
@@ -77,6 +79,9 @@ async function loadData() {
   state.projects = Array.isArray(projectResult.data) ? projectResult.data : [];
   state.tasks = Array.isArray(taskResult.data) ? taskResult.data : [];
 
+  const statusList = await fetchStatuses();
+  state.statuses = statusList.length > 0 ? statusList : buildStatusesFromTasks(state.tasks);
+
   const projectIdFromUrl = getProjectIdFromUrl();
 
   state.activeProjectId =
@@ -97,6 +102,69 @@ function getActiveTasks() {
   );
 }
 
+function normalizeStatusItem(status) {
+  const id_status = Number(status.id_status || status.id || status.status_id || 0);
+  const nama_status = String(
+    status.nama_status || status.name || status.status || status.label || ""
+  ).trim();
+
+  if (!id_status || !nama_status) return null;
+
+  return { id_status, nama_status };
+}
+
+function normalizeStatusList(list = []) {
+  const seen = new Set();
+
+  return list
+    .map(normalizeStatusItem)
+    .filter(Boolean)
+    .filter((status) => {
+      if (seen.has(status.id_status)) return false;
+      seen.add(status.id_status);
+      return true;
+    });
+}
+
+async function fetchStatuses() {
+  for (const endpoint of API.statusEndpoints) {
+    try {
+      const result = await apiFetch(endpoint);
+      const list = Array.isArray(result.data) ? result.data : Array.isArray(result) ? result : [];
+      const statuses = normalizeStatusList(list);
+
+      if (statuses.length > 0) {
+        return statuses;
+      }
+    } catch (error) {
+      // Abaikan endpoint yang tidak ada, lalu coba endpoint berikutnya.
+    }
+  }
+
+  return [];
+}
+
+function buildStatusesFromTasks(tasks = []) {
+  const statuses = tasks
+    .map((task) =>
+      normalizeStatusItem({
+        id_status: task.id_status,
+        nama_status: task.nama_status || task.status,
+      })
+    )
+    .filter(Boolean);
+
+  return normalizeStatusList(statuses);
+}
+
+function getAvailableStatuses() {
+  const statuses = normalizeStatusList(state.statuses || []);
+  return statuses.length > 0 ? statuses : buildStatusesFromTasks(state.tasks);
+}
+
+function findTaskById(taskId) {
+  return state.tasks.find((task) => Number(task.id_task) === Number(taskId)) || null;
+}
 
 function injectTaskTimeStyles() {
   if (document.getElementById("taskTimeStyle")) return;
@@ -106,7 +174,7 @@ function injectTaskTimeStyles() {
   style.textContent = `
     .table-header,
     .task-row {
-      grid-template-columns: minmax(280px, 1fr) 180px 215px 145px 43px;
+      grid-template-columns: minmax(280px, 1fr) 180px 215px 145px 72px;
     }
 
     .task-time-wrap {
@@ -138,10 +206,23 @@ function injectTaskTimeStyles() {
       line-height: 1;
     }
 
+    .task-edit {
+      border: 0;
+      border-left: 1px solid rgba(108, 91, 160, 0.12);
+      background: transparent;
+      color: var(--primary, #6d50d6);
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .task-edit:hover {
+      background: rgba(109, 80, 214, 0.08);
+    }
+
     @media (max-width: 980px) {
       .table-header,
       .task-row {
-        grid-template-columns: minmax(240px, 1fr) 160px 160px 130px 36px;
+        grid-template-columns: minmax(240px, 1fr) 160px 160px 130px 68px;
       }
     }
 
@@ -378,6 +459,145 @@ async function handleCreateTask(event) {
   }
 }
 
+function renderStatusOptions(selectedStatusId) {
+  const statuses = getAvailableStatuses();
+
+  if (statuses.length === 0) {
+    return `<option value="">Status belum tersedia</option>`;
+  }
+
+  return statuses
+    .map((status) => {
+      const selected = Number(status.id_status) === Number(selectedStatusId) ? "selected" : "";
+      return `<option value="${escapeHtml(status.id_status)}" ${selected}>${escapeHtml(status.nama_status)}</option>`;
+    })
+    .join("");
+}
+
+function renderEditTaskModal(taskId, errorMessage = "") {
+  const task = findTaskById(taskId);
+
+  if (!task) {
+    alert("Task tidak ditemukan, coba refresh halaman dulu.");
+    return;
+  }
+
+  const title = task.judul_task || task.nama_task || "";
+  const description = task.deskripsi_task || task.deskripsi || "";
+  const editorName = getCurrentUserName();
+
+  document.body.insertAdjacentHTML(
+    "beforeend",
+    `
+    <div class="modal-backdrop" id="editTaskModal" role="dialog" aria-modal="true" aria-labelledby="editTaskTitle">
+      <form class="modal-card modal-form" id="editTaskForm" data-task-id="${escapeHtml(task.id_task || "")}">
+        <div class="modal-header">
+          <h3 id="editTaskTitle">Edit Task</h3>
+          <button class="modal-close" id="closeEditTaskModal" type="button" aria-label="Close">×</button>
+        </div>
+
+        <label for="editTaskName">
+          Task name
+          <input
+            id="editTaskName"
+            name="judul_task"
+            type="text"
+            value="${escapeHtml(title)}"
+            required
+            autofocus
+          />
+        </label>
+
+        <label for="editTaskDescription">
+          Description
+          <textarea
+            id="editTaskDescription"
+            name="deskripsi_task"
+            placeholder="Deskripsi singkat"
+            rows="4"
+          >${escapeHtml(description)}</textarea>
+        </label>
+
+        <label for="editTaskStatus">
+          Status
+          <select id="editTaskStatus" name="id_status" required>
+            ${renderStatusOptions(task.id_status)}
+          </select>
+        </label>
+
+        <label for="editTaskAssigneeAuto">
+          Assignee otomatis setelah edit
+          <input id="editTaskAssigneeAuto" type="text" value="${escapeHtml(editorName)}" disabled />
+        </label>
+
+        ${errorMessage ? `<p class="login-message">${escapeHtml(errorMessage)}</p>` : ""}
+        <button class="login-btn" id="updateTaskBtn" type="submit">Update Task</button>
+      </form>
+    </div>
+    `
+  );
+
+  document
+    .getElementById("closeEditTaskModal")
+    ?.addEventListener("click", closeEditTaskModal);
+
+  document.getElementById("editTaskModal")?.addEventListener("click", (event) => {
+    if (event.target.id === "editTaskModal") {
+      closeEditTaskModal();
+    }
+  });
+
+  document
+    .getElementById("editTaskForm")
+    ?.addEventListener("submit", handleUpdateTask);
+}
+
+function closeEditTaskModal() {
+  document.getElementById("editTaskModal")?.remove();
+}
+
+async function handleUpdateTask(event) {
+  event.preventDefault();
+
+  const form = event.currentTarget;
+  const taskId = Number(form.dataset.taskId);
+  const updateButton = document.getElementById("updateTaskBtn");
+  const formData = new FormData(form);
+
+  const judul_task = String(formData.get("judul_task") || "").trim();
+  const deskripsi_task = String(formData.get("deskripsi_task") || "").trim();
+  const id_status = Number(formData.get("id_status"));
+  const updated_by = getCurrentUserId();
+
+  if (!taskId || !judul_task || !id_status || !updated_by) {
+    closeEditTaskModal();
+    renderEditTaskModal(taskId, "Nama task, status, dan user login wajib tersedia.");
+    return;
+  }
+
+  try {
+    updateButton.disabled = true;
+    updateButton.textContent = "Updating...";
+
+    await apiFetch(`${API.tasks}/${taskId}`, {
+      method: "PUT",
+      body: JSON.stringify({
+        judul_task,
+        deskripsi_task,
+        id_status,
+        updated_by,
+      }),
+    });
+
+    closeEditTaskModal();
+    await loadData();
+    renderApp();
+  } catch (error) {
+    closeEditTaskModal();
+    renderEditTaskModal(taskId, error.message);
+  }
+}
+
 function renderApp() {
   let activeProject = getActiveProject();
 
@@ -424,6 +644,12 @@ function bindEvents() {
   document
     .getElementById("mobileAddTaskBtn")
     ?.addEventListener("click", () => renderAddTaskModal());
+
+  document.querySelectorAll("[data-edit-task]").forEach((button) => {
+    button.addEventListener("click", () => {
+      renderEditTaskModal(button.dataset.editTask);
+    });
+  });
 
   document.getElementById("logoutBtn")?.addEventListener("click", logout);
   document.getElementById("mobileLogoutBtn")?.addEventListener("click", logout);

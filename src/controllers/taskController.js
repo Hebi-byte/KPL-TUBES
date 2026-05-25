@@ -205,61 +205,84 @@ const createTask = async (req, res) => {
 const updateTask = async (req, res) => {
   try {
     const { id } = req.params;
-    const {
-      id_project,
-      judul_task,
-      deskripsi_task,
-      id_status,
-      assigned_to,
-      due_date,
-      waktu_task,
-    } = req.body;
+    const { judul_task, deskripsi_task, id_status } = req.body;
 
-    if (!id_project || !judul_task || !id_status) {
+    const taskId = Number(id);
+    const cleanTitle = String(judul_task || "").trim();
+    const statusId = Number(id_status);
+
+    // User yang sedang login / sedang edit task.
+    // Kalau backend punya middleware auth, ambil dari req.user.
+    // Kalau belum, frontend mengirim updated_by dari localStorage user login.
+    const editorId = Number(
+      req.user?.id_user ||
+      req.user?.id ||
+      req.body.updated_by ||
+      req.body.edited_by ||
+      req.body.id_user ||
+      req.body.user_id
+    );
+
+    if (!taskId || !cleanTitle || !statusId || !editorId) {
       return res.status(400).json({
-        message: "id_project, judul_task, dan id_status wajib diisi",
+        message: "Nama task, status, dan user login wajib tersedia",
       });
     }
 
-    const taskDate = normalizeDateTime(due_date || waktu_task);
-
-    const [result] = await db.query(
-      `
-      UPDATE tasks
-      SET id_project = ?,
-          judul_task = ?,
-          deskripsi_task = ?,
-          id_status = ?,
-          assigned_to = ?,
-          due_date = ?
-      WHERE id_task = ?
-      `,
-      [
-        id_project,
-        judul_task,
-        deskripsi_task || null,
-        id_status,
-        assigned_to || null,
-        taskDate,
-        id,
-      ]
+    // Pastikan task-nya ada dulu.
+    const [taskRows] = await db.query(
+      "SELECT id_task FROM tasks WHERE id_task = ? LIMIT 1",
+      [taskId]
     );
 
-    if (result.affectedRows === 0) {
+    if (taskRows.length === 0) {
       return res.status(404).json({ message: "Task tidak ditemukan" });
     }
+
+    // Pastikan status yang dipilih memang ada di tabel statuses.
+    const [statusRows] = await db.query(
+      "SELECT id_status, nama_status FROM statuses WHERE id_status = ? LIMIT 1",
+      [statusId]
+    );
+
+    if (statusRows.length === 0) {
+      return res.status(400).json({ message: "Status yang dipilih tidak ditemukan" });
+    }
+
+    // Pastikan user yang mengedit memang ada.
+    const [editorRows] = await db.query(
+      "SELECT id_user, nama_user FROM users WHERE id_user = ? LIMIT 1",
+      [editorId]
+    );
+
+    if (editorRows.length === 0) {
+      return res.status(400).json({ message: "User editor tidak ditemukan" });
+    }
+
+    // Field yang diinput user tetap cuma nama, deskripsi, dan status.
+    // assigned_to otomatis pindah ke akun yang sedang mengedit task.
+    await db.query(
+      `
+      UPDATE tasks
+      SET judul_task = ?,
+          deskripsi_task = ?,
+          id_status = ?,
+          assigned_to = ?
+      WHERE id_task = ?
+      `,
+      [cleanTitle, deskripsi_task || null, statusId, editorId, taskId]
+    );
 
     res.status(200).json({
       message: "Task berhasil diupdate",
       data: {
-        id_task: Number(id),
-        id_project,
-        judul_task,
+        id_task: taskId,
+        judul_task: cleanTitle,
         deskripsi_task: deskripsi_task || null,
-        id_status,
-        assigned_to: assigned_to || null,
-        due_date: taskDate,
-        waktu_task: taskDate,
+        id_status: statusRows[0].id_status,
+        nama_status: statusRows[0].nama_status,
+        assigned_to: editorRows[0].id_user,
+        assignee: editorRows[0].nama_user,
       },
     });
   } catch (error) {

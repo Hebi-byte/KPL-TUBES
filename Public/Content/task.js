@@ -64,7 +64,7 @@ function renderTasks(tasks) {
             <span class="status-badge ${escapeHtml(statusClass)}">${escapeHtml(statusText)}</span>
           </div>
 
-          <button class="task-cell task-edit" type="button" data-delete-task="${escapeHtml(task.id_task || '')}">
+          <button class="task-cell task-edit" type="button" data-edit-task="${escapeHtml(task.id_task || '')}">
             Edit
           </button>
         </div>
