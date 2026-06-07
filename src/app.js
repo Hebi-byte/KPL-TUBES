@@ -8,7 +8,6 @@ const taskRoutes = require("./Routes/taskRoutes");
 const statusRoutes = require("./Routes/statusRoutes");
 const rolesRoutes = require("./Routes/rolesRoutes");
 const workflowRoutes = require("./Routes/workflowRoutes");
-const historyRoutes = require("./Routes/historyRoutes");
 const authRoutes = require("./Routes/authRoutes");
 
 const app = express();
@@ -23,7 +22,6 @@ app.use("/api/tasks", taskRoutes);
 app.use("/api/statuses", statusRoutes);
 app.use("/api/roles", rolesRoutes);
 app.use("/api/workflows", workflowRoutes);
-app.use("/api/history", historyRoutes);
 app.use("/api/auth", authRoutes);
 
 app.get("/", (req, res) => {

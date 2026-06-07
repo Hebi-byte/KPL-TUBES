@@ -63,16 +63,13 @@ function renderMain(project, tasks, totalTaskCount = 0) {
         <div class="table-header">
           <div>Task name</div>
           <div><span class="icon-time">◷</span>Waktu</div>
+          <div><span class="icon-time">◷</span>Deadline</div>
           <div><span class="icon-users"></span>Assignee</div>
           <div><span class="icon-status"></span>Status</div>
           <div class="add-column">${canManageTasks ? '+' : ''}</div>
         </div>
 
         <div class="task-content">
-          <div class="section-title">
-            <span class="chevron-down"></span>
-            <span>Section 1</span>
-          </div>
           <div class="task-list">
             ${renderTasks(tasks)}
           </div>

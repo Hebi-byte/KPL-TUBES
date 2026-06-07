@@ -198,9 +198,11 @@ const createTask = async (req, res) => {
       return forbidden(res, "Role kamu hanya bisa melihat, tidak boleh menambah task");
     }
 
-    if (!projectId || !cleanTitle) {
+    const taskDate = normalizeDateTime(due_date || waktu_task);
+
+    if (!projectId || !cleanTitle || !taskDate) {
       return res.status(400).json({
-        message: "id_project dan judul_task wajib diisi",
+        message: "id_project, judul_task, dan due_date wajib diisi",
       });
     }
 
@@ -231,7 +233,6 @@ const createTask = async (req, res) => {
     }
 
     const pendingStatus = pendingRows[0];
-    const taskDate = normalizeDateTime(due_date || waktu_task);
 
     // Pembuat dan assignee otomatis dari akun yang sedang login.
     const [result] = await db.query(
@@ -280,10 +281,11 @@ const createTask = async (req, res) => {
 const updateTask = async (req, res) => {
   try {
     const { id } = req.params;
-    const { judul_task, deskripsi_task, id_status } = req.body;
+    const { judul_task, deskripsi_task, due_date, id_status } = req.body;
 
     const taskId = Number(id);
     const cleanTitle = String(judul_task || "").trim();
+    const taskDate = normalizeDateTime(due_date);
     const statusId = Number(id_status);
     const actor = await getActor(req);
 
@@ -295,9 +297,9 @@ const updateTask = async (req, res) => {
       return forbidden(res, "Role kamu hanya bisa melihat, tidak boleh mengedit task");
     }
 
-    if (!taskId || !cleanTitle || !statusId) {
+    if (!taskId || !cleanTitle || !taskDate || !statusId) {
       return res.status(400).json({
-        message: "Nama task dan status wajib tersedia",
+        message: "Nama task, due date, dan status wajib tersedia",
       });
     }
 
@@ -319,18 +321,19 @@ const updateTask = async (req, res) => {
       return res.status(400).json({ message: "Status yang dipilih tidak ditemukan" });
     }
 
-    // Field yang diinput user tetap cuma nama, deskripsi, dan status.
     // assigned_to otomatis pindah ke akun yang sedang mengedit task.
+    // updated_at otomatis berubah karena kolom database menggunakan ON UPDATE CURRENT_TIMESTAMP.
     await db.query(
       `
       UPDATE tasks
       SET judul_task = ?,
           deskripsi_task = ?,
+          due_date = ?,
           id_status = ?,
           assigned_to = ?
       WHERE id_task = ?
       `,
-      [cleanTitle, deskripsi_task || null, statusId, actor.id_user, taskId]
+      [cleanTitle, deskripsi_task || null, taskDate, statusId, actor.id_user, taskId]
     );
 
     res.status(200).json({
@@ -339,6 +342,7 @@ const updateTask = async (req, res) => {
         id_task: taskId,
         judul_task: cleanTitle,
         deskripsi_task: deskripsi_task || null,
+        due_date: taskDate,
         id_status: statusRows[0].id_status,
         nama_status: statusRows[0].nama_status,
         assigned_to: actor.id_user,

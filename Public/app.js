@@ -204,6 +204,14 @@ function findTaskById(taskId) {
   return state.tasks.find((task) => Number(task.id_task) === Number(taskId)) || null;
 }
 
+function toDateTimeLocalValue(value) {
+  if (!value) return "";
+
+  const clean = String(value).trim().replace(" ", "T");
+  const match = clean.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/);
+  return match ? `${match[1]}T${match[2]}` : "";
+}
+
 function injectTaskTimeStyles() {
   if (document.getElementById("taskTimeStyle")) return;
 
@@ -212,7 +220,7 @@ function injectTaskTimeStyles() {
   style.textContent = `
     .table-header,
     .task-row {
-      grid-template-columns: minmax(280px, 1fr) 180px 215px 145px 72px;
+      grid-template-columns: minmax(250px, 1fr) 175px 175px 190px 145px 72px;
     }
 
     .task-time-wrap {
@@ -272,14 +280,14 @@ function injectTaskTimeStyles() {
     @media (max-width: 980px) {
       .table-header,
       .task-row {
-        grid-template-columns: minmax(240px, 1fr) 160px 160px 130px 68px;
+        grid-template-columns: minmax(230px, 1fr) 155px 155px 160px 130px 68px;
       }
     }
 
     @media (max-width: 720px) {
       .table-header,
       .task-row {
-        min-width: 860px;
+        min-width: 1040px;
       }
     }
   `;
@@ -439,6 +447,16 @@ function renderAddTaskModal(errorMessage = "") {
           ></textarea>
         </label>
 
+        <label for="taskDueDate">
+          Due date
+          <input
+            id="taskDueDate"
+            name="due_date"
+            type="datetime-local"
+            required
+          />
+        </label>
+
         <label for="taskAssigneeAuto">
           Assignee
           <input id="taskAssigneeAuto" type="text" value="${escapeHtml(assigneeName)}" disabled />
@@ -494,9 +512,9 @@ async function handleCreateTask(event) {
   const created_by = getCurrentUserId();
   const id_project = Number(state.activeProjectId);
 
-  if (!judul_task || !id_project || !created_by) {
+  if (!judul_task || !due_date || !id_project || !created_by) {
     closeAddTaskModal();
-    renderAddTaskModal("Task name, project, dan user login wajib tersedia.");
+    renderAddTaskModal("Task name, due date, project, dan user login wajib tersedia.");
     return;
   }
 
@@ -554,6 +572,7 @@ function renderEditTaskModal(taskId, errorMessage = "") {
 
   const title = task.judul_task || task.nama_task || "";
   const description = task.deskripsi_task || task.deskripsi || "";
+  const dueDate = toDateTimeLocalValue(task.due_date);
   const editorName = getCurrentUserName();
 
   document.body.insertAdjacentHTML(
@@ -586,6 +605,17 @@ function renderEditTaskModal(taskId, errorMessage = "") {
             placeholder="Deskripsi singkat"
             rows="4"
           >${escapeHtml(description)}</textarea>
+        </label>
+
+        <label for="editTaskDueDate">
+          Due date
+          <input
+            id="editTaskDueDate"
+            name="due_date"
+            type="datetime-local"
+            value="${escapeHtml(dueDate)}"
+            required
+          />
         </label>
 
         <label for="editTaskStatus">
@@ -642,12 +672,13 @@ async function handleUpdateTask(event) {
 
   const judul_task = String(formData.get("judul_task") || "").trim();
   const deskripsi_task = String(formData.get("deskripsi_task") || "").trim();
+  const due_date = String(formData.get("due_date") || "").trim();
   const id_status = Number(formData.get("id_status"));
   const updated_by = getCurrentUserId();
 
-  if (!taskId || !judul_task || !id_status || !updated_by) {
+  if (!taskId || !judul_task || !due_date || !id_status || !updated_by) {
     closeEditTaskModal();
-    renderEditTaskModal(taskId, "Nama task, status, dan user login wajib tersedia.");
+    renderEditTaskModal(taskId, "Nama task, due date, status, dan user login wajib tersedia.");
     return;
   }
 
@@ -660,6 +691,7 @@ async function handleUpdateTask(event) {
       body: JSON.stringify({
         judul_task,
         deskripsi_task,
+        due_date,
         id_status,
         updated_by,
       }),

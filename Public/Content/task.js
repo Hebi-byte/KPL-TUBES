@@ -2,9 +2,9 @@ import { escapeHtml, normalizeStatus, getInitial } from './utils.js';
 import { state } from './shared.js';
 
 function formatTaskTime(value) {
-  if (!value) return 'Belum ada waktu';
+  if (!value) return 'Belum tersedia';
 
-  const raw = String(value);
+  const raw = String(value).trim();
   const normalized = raw.includes('T') ? raw : raw.replace(' ', 'T');
   const date = new Date(normalized);
 
@@ -19,6 +19,17 @@ function formatTaskTime(value) {
     hour: '2-digit',
     minute: '2-digit',
   }).format(date);
+}
+
+function getActivityTime(task) {
+  const createdAt = task.created_at || '';
+  const updatedAt = task.updated_at || '';
+
+  if (updatedAt && createdAt && String(updatedAt) !== String(createdAt)) {
+    return { label: 'Diedit', value: updatedAt };
+  }
+
+  return { label: 'Dibuat', value: createdAt || updatedAt };
 }
 
 function renderTasks(tasks) {
@@ -38,8 +49,7 @@ function renderTasks(tasks) {
       const statusClass = normalizeStatus(statusText);
       const assignee = task.assignee || task.nama_user || task.creator || 'Belum di-assign';
       const desc = task.deskripsi_task || task.deskripsi || '';
-      const taskTime = task.due_date || task.waktu_task || task.created_at || '';
-      const timeLabel = task.due_date || task.waktu_task ? 'Deadline' : 'Dibuat';
+      const activityTime = getActivityTime(task);
 
       return `
         <div class="task-row" data-task-id="${escapeHtml(task.id_task || '')}">
@@ -53,8 +63,15 @@ function renderTasks(tasks) {
 
           <div class="task-cell task-time">
             <div class="task-time-wrap">
-              <div class="task-time-label">${escapeHtml(timeLabel)}</div>
-              <div class="task-time-value">${escapeHtml(formatTaskTime(taskTime))}</div>
+              <div class="task-time-label">${escapeHtml(activityTime.label)}</div>
+              <div class="task-time-value">${escapeHtml(formatTaskTime(activityTime.value))}</div>
+            </div>
+          </div>
+
+          <div class="task-cell task-time">
+            <div class="task-time-wrap">
+              <div class="task-time-label">Deadline</div>
+              <div class="task-time-value">${escapeHtml(formatTaskTime(task.due_date))}</div>
             </div>
           </div>
 
