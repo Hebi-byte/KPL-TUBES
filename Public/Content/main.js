@@ -12,6 +12,7 @@ function renderMain(project, tasks, totalTaskCount = 0) {
   );
   const taskLabel = `${Number(totalTaskCount) || 0} Task${Number(totalTaskCount) === 1 ? '' : 's'}`;
   const canManageTasks = Boolean(state.permissions?.canManageTasks);
+  const canManageProjects = Boolean(state.permissions?.canManageProjects);
 
   return `
     <main class="main-content">
@@ -19,7 +20,22 @@ function renderMain(project, tasks, totalTaskCount = 0) {
         <div class="project-info">
           <div class="project-icon" aria-hidden="true"><span class="project-icon-shape"></span></div>
           <div class="project-heading">
-            <h2>${title}</h2>
+            <div class="project-title-row">
+              <h2>${title}</h2>
+              ${
+                canManageProjects
+                  ? `
+                    <div class="project-menu-wrapper">
+                      <button class="project-menu-btn" id="projectMenuBtn" type="button" aria-label="Project menu" aria-expanded="false">⋮</button>
+                      <div class="project-menu-dropdown" id="projectMenuDropdown" hidden>
+                        <button id="editProjectMenuBtn" type="button">Edit project</button>
+                        <button class="danger-menu-item" id="deleteProjectMenuBtn" type="button">Delete project</button>
+                      </div>
+                    </div>
+                  `
+                  : ''
+              }
+            </div>
             <p class="project-description">${description}</p>
             <span class="badge task-count-badge" id="taskCountBadge">
               <span class="icon-task-count"></span>${escapeHtml(taskLabel)}
@@ -63,7 +79,7 @@ function renderMain(project, tasks, totalTaskCount = 0) {
         <div class="table-header">
           <div>Task name</div>
           <div><span class="icon-time">◷</span>Waktu</div>
-          <div><span class="icon-time">◷</span>Deadline</div>
+          <div><span class="icon-time">◷</span>Due date</div>
           <div><span class="icon-users"></span>Assignee</div>
           <div><span class="icon-status"></span>Status</div>
           <div class="add-column">${canManageTasks ? '+' : ''}</div>

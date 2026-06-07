@@ -204,6 +204,18 @@ function findTaskById(taskId) {
   return state.tasks.find((task) => Number(task.id_task) === Number(taskId)) || null;
 }
 
+function findProjectById(projectId) {
+  return state.projects.find((project) => Number(project.id_project) === Number(projectId)) || null;
+}
+
+function closeProjectMenu() {
+  const dropdown = document.getElementById("projectMenuDropdown");
+  const button = document.getElementById("projectMenuBtn");
+
+  if (dropdown) dropdown.hidden = true;
+  if (button) button.setAttribute("aria-expanded", "false");
+}
+
 function toDateTimeLocalValue(value) {
   if (!value) return "";
 
@@ -404,6 +416,165 @@ async function handleCreateProject(event) {
   } catch (error) {
     closeAddProjectModal();
     renderAddProjectModal(error.message);
+  }
+}
+
+function renderEditProjectModal(projectId = state.activeProjectId, errorMessage = "") {
+  if (!canManageProjects()) {
+    alert("Role kamu tidak boleh mengedit project.");
+    return;
+  }
+
+  const project = findProjectById(projectId);
+
+  if (!project) {
+    alert("Project tidak ditemukan, coba refresh halaman dulu.");
+    return;
+  }
+
+  closeProjectMenu();
+
+  document.body.insertAdjacentHTML(
+    "beforeend",
+    `
+    <div class="modal-backdrop" id="editProjectModal" role="dialog" aria-modal="true" aria-labelledby="editProjectTitle">
+      <form class="modal-card modal-form" id="editProjectForm" data-project-id="${escapeHtml(project.id_project || "")}">
+        <div class="modal-header">
+          <h3 id="editProjectTitle">Edit Project</h3>
+          <button class="modal-close" id="closeEditProjectModal" type="button" aria-label="Close">×</button>
+        </div>
+
+        <label for="editProjectName">
+          Project name
+          <input
+            id="editProjectName"
+            name="nama_project"
+            type="text"
+            value="${escapeHtml(project.nama_project || "")}"
+            required
+            autofocus
+          />
+        </label>
+
+        <label for="editProjectDescription">
+          Description
+          <textarea
+            id="editProjectDescription"
+            name="deskripsi"
+            placeholder="Deskripsi singkat project"
+            rows="4"
+          >${escapeHtml(project.deskripsi || project.deskripsi_project || "")}</textarea>
+        </label>
+
+        ${errorMessage ? `<p class="login-message">${escapeHtml(errorMessage)}</p>` : ""}
+        <div class="modal-actions">
+          <button class="login-btn" id="updateProjectBtn" type="submit">Update Project</button>
+          <button class="danger-btn" id="deleteProjectBtn" type="button">Delete Project</button>
+        </div>
+      </form>
+    </div>
+    `
+  );
+
+  document
+    .getElementById("closeEditProjectModal")
+    ?.addEventListener("click", closeEditProjectModal);
+
+  document.getElementById("editProjectModal")?.addEventListener("click", (event) => {
+    if (event.target.id === "editProjectModal") {
+      closeEditProjectModal();
+    }
+  });
+
+  document
+    .getElementById("editProjectForm")
+    ?.addEventListener("submit", handleUpdateProject);
+
+  document
+    .getElementById("deleteProjectBtn")
+    ?.addEventListener("click", () => handleDeleteProject(project.id_project));
+}
+
+function closeEditProjectModal() {
+  document.getElementById("editProjectModal")?.remove();
+}
+
+async function handleUpdateProject(event) {
+  event.preventDefault();
+
+  if (!canManageProjects()) {
+    closeEditProjectModal();
+    alert("Role kamu tidak boleh mengedit project.");
+    return;
+  }
+
+  const form = event.currentTarget;
+  const projectId = Number(form.dataset.projectId);
+  const updateButton = document.getElementById("updateProjectBtn");
+  const formData = new FormData(form);
+
+  const nama_project = String(formData.get("nama_project") || "").trim();
+  const deskripsi = String(formData.get("deskripsi") || "").trim();
+  const updated_by = getCurrentUserId();
+
+  if (!projectId || !nama_project || !updated_by) {
+    closeEditProjectModal();
+    renderEditProjectModal(projectId, "Nama project dan user login wajib tersedia.");
+    return;
+  }
+
+  try {
+    updateButton.disabled = true;
+    updateButton.textContent = "Updating...";
+
+    await apiFetch(`${API.projects}/${projectId}`, {
+      method: "PUT",
+      body: JSON.stringify({ nama_project, deskripsi, updated_by }),
+    });
+
+    closeEditProjectModal();
+    await loadData();
+    renderApp();
+  } catch (error) {
+    closeEditProjectModal();
+    renderEditProjectModal(projectId, error.message);
+  }
+}
+
+async function handleDeleteProject(projectId = state.activeProjectId) {
+  if (!canManageProjects()) {
+    alert("Role kamu tidak boleh menghapus project.");
+    return;
+  }
+
+  const project = findProjectById(projectId);
+  const projectName = project?.nama_project || "project ini";
+  const confirmed = window.confirm(
+    `Hapus project "${projectName}"? Semua task yang ada di dalam project ini juga akan dihapus.`
+  );
+
+  if (!confirmed) return;
+
+  try {
+    await apiFetch(`${API.projects}/${projectId}`, {
+      method: "DELETE",
+      body: JSON.stringify({ deleted_by: getCurrentUserId() }),
+    });
+
+    closeEditProjectModal();
+    closeProjectMenu();
+    state.activeProjectId = null;
+    history.pushState({}, "", "/dashboard");
+    await loadData();
+    state.activeProjectId = state.projects[0]?.id_project || null;
+    history.replaceState(
+      {},
+      "",
+      state.activeProjectId ? `/projects/${state.activeProjectId}` : "/dashboard"
+    );
+    renderApp();
+  } catch (error) {
+    alert(error.message);
   }
 }
 
@@ -631,7 +802,14 @@ function renderEditTaskModal(taskId, errorMessage = "") {
         </label>
 
         ${errorMessage ? `<p class="login-message">${escapeHtml(errorMessage)}</p>` : ""}
-        <button class="login-btn" id="updateTaskBtn" type="submit">Update Task</button>
+        <div class="modal-actions">
+          <button class="login-btn" id="updateTaskBtn" type="submit">Update Task</button>
+          ${
+            canManageProjects()
+              ? '<button class="danger-btn" id="deleteTaskBtn" type="button">Delete Task</button>'
+              : ''
+          }
+        </div>
       </form>
     </div>
     `
@@ -650,6 +828,10 @@ function renderEditTaskModal(taskId, errorMessage = "") {
   document
     .getElementById("editTaskForm")
     ?.addEventListener("submit", handleUpdateTask);
+
+  document
+    .getElementById("deleteTaskBtn")
+    ?.addEventListener("click", () => handleDeleteTask(task.id_task));
 }
 
 function closeEditTaskModal() {
@@ -706,6 +888,32 @@ async function handleUpdateTask(event) {
   }
 }
 
+async function handleDeleteTask(taskId) {
+  if (!canManageProjects()) {
+    alert("Hanya owner yang boleh menghapus task.");
+    return;
+  }
+
+  const task = findTaskById(taskId);
+  const taskName = task?.judul_task || task?.nama_task || "task ini";
+  const confirmed = window.confirm(`Hapus task "${taskName}"?`);
+
+  if (!confirmed) return;
+
+  try {
+    await apiFetch(`${API.tasks}/${taskId}`, {
+      method: "DELETE",
+      body: JSON.stringify({ deleted_by: getCurrentUserId() }),
+    });
+
+    closeEditTaskModal();
+    await loadData();
+    renderApp();
+  } catch (error) {
+    alert(error.message);
+  }
+}
+
 function renderApp() {
   refreshPermissions();
   let activeProject = getActiveProject();
@@ -741,6 +949,25 @@ function bindEvents() {
       renderApp();
     });
   });
+
+  document.getElementById("projectMenuBtn")?.addEventListener("click", (event) => {
+    event.stopPropagation();
+    const dropdown = document.getElementById("projectMenuDropdown");
+    const button = event.currentTarget;
+
+    if (!dropdown) return;
+
+    dropdown.hidden = !dropdown.hidden;
+    button.setAttribute("aria-expanded", String(!dropdown.hidden));
+  });
+
+  document
+    .getElementById("editProjectMenuBtn")
+    ?.addEventListener("click", () => renderEditProjectModal(state.activeProjectId));
+
+  document
+    .getElementById("deleteProjectMenuBtn")
+    ?.addEventListener("click", () => handleDeleteProject(state.activeProjectId));
 
   document
     .getElementById("addProjectBtn")
