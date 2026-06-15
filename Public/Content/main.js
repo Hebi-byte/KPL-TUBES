@@ -2,6 +2,8 @@ import { escapeHtml } from './utils.js';
 import { state } from './shared.js';
 import { renderTasks } from './task.js';
 
+// Fungsi untuk membuat tampilan HTML halaman utama dashboard (project + daftar task)
+// Siapkan data project yang akan ditampilkan
 function renderMain(project, tasks, totalTaskCount = 0) {
   const title = escapeHtml(project?.nama_project || 'Project');
   const description = escapeHtml(
@@ -10,7 +12,10 @@ function renderMain(project, tasks, totalTaskCount = 0) {
       project?.description ||
       'Belum ada deskripsi project.'
   );
+
+  // Label jumlah task, otomatis menyesuaikan "Task" atau "Tasks"
   const taskLabel = `${Number(totalTaskCount) || 0} Task${Number(totalTaskCount) === 1 ? '' : 's'}`;
+  // Cek permission user: apakah boleh kelola task dan project
   const canManageTasks = Boolean(state.permissions?.canManageTasks);
   const canManageProjects = Boolean(state.permissions?.canManageProjects);
 

@@ -1,3 +1,4 @@
+// Fungsi untuk membuat tampilan HTML halaman login
 function renderLogin() {
   return `
     <section class="login-container">
