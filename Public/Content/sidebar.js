@@ -1,9 +1,11 @@
 import { escapeHtml } from './utils.js';
 import { state } from './shared.js';
 
+// Fungsi untuk membuat tampilan sidebar (daftar project + tombol logout)
 function renderSidebar() {
   const canManageProjects = Boolean(state.permissions?.canManageProjects);
 
+  // Buat link untuk setiap project, tandai yang sedang aktif
   const projectLinks = state.projects
     .map((project) => {
       const isActive = Number(project.id_project) === Number(state.activeProjectId);
@@ -50,6 +52,7 @@ function renderSidebar() {
   `;
 }
 
+// Fungsi untuk tampilan khusus saat belum ada project sama sekali
 function renderEmptyProject() {
   const canManageProjects = Boolean(state.permissions?.canManageProjects);
 

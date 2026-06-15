@@ -1,13 +1,16 @@
 import { escapeHtml, normalizeStatus, getInitial } from './utils.js';
 import { state } from './shared.js';
 
+// Mengubah nilai datetime dari database menjadi format tanggal yang lebih mudah dibaca
 function formatTaskTime(value) {
   if (!value) return 'Belum tersedia';
 
+  // Normalisasi format datetime supaya bisa dibaca oleh objek Date
   const raw = String(value).trim();
   const normalized = raw.includes('T') ? raw : raw.replace(' ', 'T');
   const date = new Date(normalized);
 
+  // Kalau format tidak valid, tampilkan apa adanya
   if (Number.isNaN(date.getTime())) {
     return raw;
   }
@@ -21,6 +24,7 @@ function formatTaskTime(value) {
   }).format(date);
 }
 
+// Menentukan label waktu task: "Diedit" jika pernah diubah, "Dibuat" jika belum
 function getActivityTime(task) {
   const createdAt = task.created_at || '';
   const updatedAt = task.updated_at || '';
@@ -33,6 +37,8 @@ function getActivityTime(task) {
 }
 
 function renderTasks(tasks) {
+
+   // Kalau task kosong, tampilkan pesan sesuai kondisi (hasil search atau memang belum ada task)
   if (!tasks || tasks.length === 0) {
   const keyword = String(state.searchQuery || '').trim();
 
@@ -51,6 +57,7 @@ function renderTasks(tasks) {
 
   const canManageTasks = Boolean(state.permissions?.canManageTasks);
 
+  // Render setiap task menjadi satu baris di tabel
   return tasks
     .map((task) => {
       const statusText = task.nama_status || task.status || 'pending';

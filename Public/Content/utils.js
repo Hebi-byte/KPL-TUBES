@@ -7,6 +7,7 @@ function escapeHtml(value = '') {
     .replaceAll("'", '&#039;');
 }
 
+// Mengubah teks status apapun menjadi class CSS yang seragam
 function normalizeStatus(status = '') {
   const text = String(status).toLowerCase();
 
@@ -21,10 +22,10 @@ function normalizeStatus(status = '') {
   if (text.includes('progress') || text.includes('proses') || text.includes('ongoing') || text.includes('on going')) {
     return 'in-progress';
   }
-
   return 'pending';
 }
 
+// Mengambil huruf pertama dari nama untuk ditampilkan sebagai avatar inisial
 function getInitial(name = '?') {
   return String(name || '?').trim().charAt(0).toUpperCase() || '?';
 }
