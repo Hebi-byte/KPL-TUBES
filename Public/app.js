@@ -1,9 +1,11 @@
+// Import fungsi autentikasi, state global, komponen UI, dan utility
 import { requireLogin, logout } from "./Content/auth.js";
 import { appEl, state } from "./Content/shared.js";
 import { renderSidebar, renderEmptyProject } from "./Content/sidebar.js";
 import { renderMain } from "./Content/main.js";
 import { escapeHtml } from "./Content/utils.js";
 
+// Konfigurasi endpoint API backend
 const API = {
   projects: "/api/projects",
   tasks: "/api/tasks",
@@ -11,16 +13,19 @@ const API = {
   statusEndpoints: ["/api/statuses", "/api/status"],
 };
 
+// Mapping ID role ke nama role
 const ROLE_BY_ID = {
   1: "owner",
   2: "read",
   3: "edit",
 };
 
+// Mengambil token login dari localStorage
 function getToken() {
   return localStorage.getItem("token");
 }
 
+// Mengambil data user yang sedang login
 function getCurrentUser() {
   try {
     return JSON.parse(localStorage.getItem("taskflow_user") || "{}") || {};
@@ -29,25 +34,30 @@ function getCurrentUser() {
   }
 }
 
+// Mengambil ID user yang sedang login
 function getCurrentUserId() {
   const user = getCurrentUser();
   return Number(user.id_user || user.id || user.user_id || 0);
 }
 
+// Mengambil nama user yang sedang login
 function getCurrentUserName() {
   const user = getCurrentUser();
   return user.nama_user || user.name || user.username || "User login";
 }
 
+// Menormalisasi nama role menjadi huruf kecil
 function normalizeRoleName(value) {
   return String(value || "").trim().toLowerCase();
 }
 
+// Mengambil role user saat ini
 function getCurrentRoleName() {
   const user = getCurrentUser();
   return normalizeRoleName(user.nama_role || user.role || ROLE_BY_ID[Number(user.id_role)]) || "read";
 }
 
+// Mengatur hak akses berdasarkan role user
 function refreshPermissions() {
   const roleName = getCurrentRoleName();
 
@@ -61,6 +71,7 @@ function refreshPermissions() {
   return state.permissions;
 }
 
+// Mengecek apakah user boleh mengelola project
 function canManageProjects() {
   return Boolean(refreshPermissions().canManageProjects);
 }
@@ -69,6 +80,7 @@ function canManageTasks() {
   return Boolean(refreshPermissions().canManageTasks);
 }
 
+// Mengecek apakah user boleh mengelola task
 async function apiFetch(url, options = {}) {
   const headers = new Headers(options.headers || {});
   const token = getToken();
@@ -101,11 +113,13 @@ async function apiFetch(url, options = {}) {
   return result;
 }
 
+// Wrapper fetch API yang otomatis menambahkan token Authorization
 function getProjectIdFromUrl() {
   const match = window.location.pathname.match(/^\/projects\/(\d+)/);
   return match ? Number(match[1]) : null;
 }
 
+// Mengambil ID project dari URL browser
 async function loadData() {
   refreshPermissions();
 
@@ -126,6 +140,7 @@ async function loadData() {
     projectIdFromUrl || state.activeProjectId || state.projects[0]?.id_project || null;
 }
 
+// Mengambil project yang sedang aktif
 function getActiveProject() {
   return (
     state.projects.find(
@@ -134,10 +149,12 @@ function getActiveProject() {
   );
 }
 
+// Menormalisasi teks pencarian
 function normalizeSearchText(value) {
   return String(value || "").toLowerCase().trim();
 }
 
+// Mengecek apakah task sesuai kata kunci pencarian
 function taskMatchesSearch(task, keyword) {
   const query = normalizeSearchText(keyword);
 
@@ -159,18 +176,21 @@ function taskMatchesSearch(task, keyword) {
   ].some((field) => normalizeSearchText(field).includes(query));
 }
 
+// Mengambil task pada project aktif
 function getActiveTasks() {
   return state.tasks
     .filter((task) => Number(task.id_project) === Number(state.activeProjectId))
     .filter((task) => taskMatchesSearch(task, state.searchQuery));
 }
 
+// Menghitung jumlah task project aktif
 function getActiveTaskCount() {
   return state.tasks.filter(
     (task) => Number(task.id_project) === Number(state.activeProjectId)
   ).length;
 }
 
+// Menormalisasi data status dari API
 function normalizeStatusItem(status) {
   const id_status = Number(status.id_status || status.id || status.status_id || 0);
   const nama_status = String(
@@ -182,6 +202,7 @@ function normalizeStatusItem(status) {
   return { id_status, nama_status };
 }
 
+// Menghilangkan data status duplikat
 function normalizeStatusList(list = []) {
   const seen = new Set();
 
@@ -195,6 +216,7 @@ function normalizeStatusList(list = []) {
     });
 }
 
+// Mengambil daftar status dari backend
 async function fetchStatuses() {
   for (const endpoint of API.statusEndpoints) {
     try {
@@ -213,6 +235,7 @@ async function fetchStatuses() {
   return [];
 }
 
+// Membuat daftar status berdasarkan data task
 function buildStatusesFromTasks(tasks = []) {
   const statuses = tasks
     .map((task) =>
@@ -226,19 +249,23 @@ function buildStatusesFromTasks(tasks = []) {
   return normalizeStatusList(statuses);
 }
 
+// Mengambil status yang tersedia
 function getAvailableStatuses() {
   const statuses = normalizeStatusList(state.statuses || []);
   return statuses.length > 0 ? statuses : buildStatusesFromTasks(state.tasks);
 }
 
+// Mencari task berdasarkan ID
 function findTaskById(taskId) {
   return state.tasks.find((task) => Number(task.id_task) === Number(taskId)) || null;
 }
 
+// Mencari project berdasarkan ID
 function findProjectById(projectId) {
   return state.projects.find((project) => Number(project.id_project) === Number(projectId)) || null;
 }
 
+// Menutup dropdown menu project
 function closeProjectMenu() {
   const dropdown = document.getElementById("projectMenuDropdown");
   const button = document.getElementById("projectMenuBtn");
@@ -247,6 +274,7 @@ function closeProjectMenu() {
   if (button) button.setAttribute("aria-expanded", "false");
 }
 
+// Mengubah format tanggal menjadi datetime-local
 function toDateTimeLocalValue(value) {
   if (!value) return "";
 
@@ -255,6 +283,7 @@ function toDateTimeLocalValue(value) {
   return match ? `${match[1]}T${match[2]}` : "";
 }
 
+// Menambahkan style CSS untuk tampilan task
 function injectTaskTimeStyles() {
   if (document.getElementById("taskTimeStyle")) return;
 
@@ -337,6 +366,7 @@ function injectTaskTimeStyles() {
   document.head.appendChild(style);
 }
 
+// Menampilkan modal tambah project
 function renderAddProjectModal(errorMessage = "") {
   if (!canManageProjects()) {
     alert("Role kamu tidak boleh menambah project.");
@@ -397,10 +427,12 @@ function renderAddProjectModal(errorMessage = "") {
     ?.addEventListener("submit", handleCreateProject);
 }
 
+// Menutup modal tambah projec
 function closeAddProjectModal() {
   document.getElementById("addProjectModal")?.remove();
 }
 
+// Menyimpan project baru ke database
 async function handleCreateProject(event) {
   event.preventDefault();
 
@@ -450,6 +482,7 @@ async function handleCreateProject(event) {
   }
 }
 
+// Menampilkan modal edit project
 function renderEditProjectModal(projectId = state.activeProjectId, errorMessage = "") {
   if (!canManageProjects()) {
     alert("Role kamu tidak boleh mengedit project.");
@@ -526,10 +559,12 @@ function renderEditProjectModal(projectId = state.activeProjectId, errorMessage 
     ?.addEventListener("click", () => handleDeleteProject(project.id_project));
 }
 
+// Menutup modal edit project
 function closeEditProjectModal() {
   document.getElementById("editProjectModal")?.remove();
 }
 
+// Mengupdate data project
 async function handleUpdateProject(event) {
   event.preventDefault();
 
@@ -572,6 +607,7 @@ async function handleUpdateProject(event) {
   }
 }
 
+// Menghapus project beserta task di dalamnya
 async function handleDeleteProject(projectId = state.activeProjectId) {
   if (!canManageProjects()) {
     alert("Role kamu tidak boleh menghapus project.");
@@ -609,6 +645,7 @@ async function handleDeleteProject(projectId = state.activeProjectId) {
   }
 }
 
+// Menampilkan modal tambah task
 function renderAddTaskModal(errorMessage = "") {
   if (!canManageTasks()) {
     alert("Role kamu hanya bisa melihat, tidak boleh menambah task.");
@@ -691,10 +728,12 @@ function renderAddTaskModal(errorMessage = "") {
     ?.addEventListener("submit", handleCreateTask);
 }
 
+// Menutup modal tambah task
 function closeAddTaskModal() {
   document.getElementById("addTaskModal")?.remove();
 }
 
+// Menyimpan task baru ke database
 async function handleCreateTask(event) {
   event.preventDefault();
 
@@ -744,6 +783,7 @@ async function handleCreateTask(event) {
   }
 }
 
+// Membuat pilihan status pada form edit task
 function renderStatusOptions(selectedStatusId) {
   const statuses = getAvailableStatuses();
 
@@ -759,6 +799,7 @@ function renderStatusOptions(selectedStatusId) {
     .join("");
 }
 
+// Menampilkan modal edit task
 function renderEditTaskModal(taskId, errorMessage = "") {
   if (!canManageTasks()) {
     alert("Role kamu hanya bisa melihat, tidak boleh mengedit task.");
@@ -865,10 +906,12 @@ function renderEditTaskModal(taskId, errorMessage = "") {
     ?.addEventListener("click", () => handleDeleteTask(task.id_task));
 }
 
+// Menutup modal edit task
 function closeEditTaskModal() {
   document.getElementById("editTaskModal")?.remove();
 }
 
+// Mengupdate data task
 async function handleUpdateTask(event) {
   event.preventDefault();
 
@@ -919,6 +962,7 @@ async function handleUpdateTask(event) {
   }
 }
 
+// Menghapus task
 async function handleDeleteTask(taskId) {
   if (!canManageProjects()) {
     alert("Hanya owner yang boleh menghapus task.");
@@ -945,6 +989,7 @@ async function handleDeleteTask(taskId) {
   }
 }
 
+// Merender seluruh tampilan dashboard
 function renderApp() {
   refreshPermissions();
   let activeProject = getActiveProject();
@@ -970,6 +1015,7 @@ function renderApp() {
   bindEvents();
 }
 
+// Mendaftarkan seluruh event listener tombol dan input
 function bindEvents() {
   document.querySelectorAll(".project-link").forEach((link) => {
     link.addEventListener("click", (event) => {
@@ -1038,6 +1084,7 @@ function bindEvents() {
   document.getElementById("mobileLogoutBtn")?.addEventListener("click", logout);
 }
 
+// Inisialisasi aplikasi saat pertama kali dibuka
 async function init() {
   requireLogin();
   refreshPermissions();
@@ -1058,9 +1105,11 @@ async function init() {
   }
 }
 
+// Menangani tombol back/forward browser
 window.addEventListener("popstate", () => {
   state.activeProjectId = getProjectIdFromUrl() || state.projects[0]?.id_project || null;
   renderApp();
 });
 
+// Menjalankan aplikasi
 init();
