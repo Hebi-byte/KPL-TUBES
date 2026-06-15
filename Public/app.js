@@ -134,10 +134,41 @@ function getActiveProject() {
   );
 }
 
+function normalizeSearchText(value) {
+  return String(value || "").toLowerCase().trim();
+}
+
+function taskMatchesSearch(task, keyword) {
+  const query = normalizeSearchText(keyword);
+
+  if (!query) return true;
+
+  return [
+    task.judul_task,
+    task.nama_task,
+    task.deskripsi_task,
+    task.deskripsi,
+    task.nama_project,
+    task.nama_status,
+    task.status,
+    task.assignee,
+    task.creator,
+    task.due_date,
+    task.created_at,
+    task.updated_at,
+  ].some((field) => normalizeSearchText(field).includes(query));
+}
+
 function getActiveTasks() {
+  return state.tasks
+    .filter((task) => Number(task.id_project) === Number(state.activeProjectId))
+    .filter((task) => taskMatchesSearch(task, state.searchQuery));
+}
+
+function getActiveTaskCount() {
   return state.tasks.filter(
     (task) => Number(task.id_project) === Number(state.activeProjectId)
-  );
+  ).length;
 }
 
 function normalizeStatusItem(status) {
@@ -931,7 +962,7 @@ function renderApp() {
     appEl.innerHTML = `
       <div class="dashboard-shell">
         ${renderSidebar()}
-        ${renderMain(activeProject, activeTasks, activeTasks.length)}
+        ${renderMain(activeProject, activeTasks, getActiveTaskCount())}
       </div>
     `;
   }
@@ -948,6 +979,22 @@ function bindEvents() {
       history.pushState({}, "", `/projects/${state.activeProjectId}`);
       renderApp();
     });
+  });
+  document.getElementById("taskSearch")?.addEventListener("input", (event) => {
+    state.searchQuery = event.target.value;
+    renderApp();
+
+    const searchInput = document.getElementById("taskSearch");
+    const cursorPosition = state.searchQuery.length;
+
+    if (searchInput) {
+      searchInput.focus();
+      try {
+        searchInput.setSelectionRange(cursorPosition, cursorPosition);
+      } catch (error) {
+        // Tidak masalah kalau browser tidak mendukung setSelectionRange untuk input search.
+      }
+    }
   });
 
   document.getElementById("projectMenuBtn")?.addEventListener("click", (event) => {

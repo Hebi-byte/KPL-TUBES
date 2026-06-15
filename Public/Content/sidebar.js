@@ -46,10 +46,6 @@ function renderSidebar() {
           <span>↪</span> Logout
         </button>
       </div>
-
-      <div class="setting-link">
-        <span>⚙</span> Setting
-      </div>
     </aside>
   `;
 }

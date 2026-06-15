@@ -46,7 +46,7 @@ function renderMain(project, tasks, totalTaskCount = 0) {
         <div class="header-actions">
           <label class="search-box" for="taskSearch">
             <span class="icon-search"></span>
-            <input id="taskSearch" type="search" placeholder="Search" />
+            <input id="taskSearch" type="search" placeholder="Search" value="${escapeHtml(state.searchQuery || '')}" />
           </label>
           <div class="avatar" aria-hidden="true"></div>
         </div>

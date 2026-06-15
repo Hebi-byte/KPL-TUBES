@@ -13,6 +13,8 @@ const state = {
     canManageTasks: false,
     readOnly: true,
   },
+  showCompleted: true,
+  searchQuery: '',
 };
 
 export { appEl, state };

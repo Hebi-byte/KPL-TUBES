@@ -34,12 +34,20 @@ function getActivityTime(task) {
 
 function renderTasks(tasks) {
   if (!tasks || tasks.length === 0) {
+  const keyword = String(state.searchQuery || '').trim();
+
+  if (keyword) {
     return `
-      <div class="empty-state">
-        Belum ada task untuk project ini.
+      <div class="empty-task">
+        Tidak ada task yang cocok dengan "${escapeHtml(keyword)}".
       </div>
     `;
   }
+
+  return `
+    Belum ada task untuk project ini.
+  `;
+}
 
   const canManageTasks = Boolean(state.permissions?.canManageTasks);
 
